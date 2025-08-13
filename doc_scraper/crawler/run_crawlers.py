@@ -1,12 +1,14 @@
-import os
-from doc_scraper.utils import load_years_metadata, get_year_link, hide_logs, load_doc_metadata_file, filter_doc_metadata, create_folder_structure,create_folder_structure_on_cloud, upload_local_documents_to_gdrive, filter_pdf_only, save_upload_results,get_cloud_credentials
+from doc_scraper.utils import load_years_metadata, get_year_link, hide_logs, load_doc_metadata_file, filter_doc_metadata, create_folder_structure,create_folder_structure_on_cloud, upload_local_documents_to_gdrive, filter_pdf_only, save_upload_results, get_cloud_credentials, prepare_metadata_for_db, connect_to_db, insert_docs_by_year
 from scrapy.crawler import CrawlerRunner
 from twisted.internet import reactor, defer
 from document_scraper.document_scraper import YearsSpider
 from document_scraper.document_scraper.spiders import DocMetadataSpider
 from document_scraper.document_scraper.spiders import PDFDownloaderSpider
-from doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, classify_gazette, save_classified_doc_metadata
+from doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, save_classified_doc_metadata, prepare_classified_metadata
 from googleapiclient.discovery import build
+import json
+from pathlib import Path
+from datetime import datetime
 
 @defer.inlineCallbacks
 def run_crawlers_sequentially(args, config, project_root, user_input_kind):
@@ -34,7 +36,6 @@ def run_crawlers_sequentially(args, config, project_root, user_input_kind):
         # Step 2: Validate CLI --year against scraped data
         metadata = load_years_metadata(output_path)
         scraped_years = [entry["year"] for entry in metadata]
-        print(scraped_years)
         
         if str(args.year) not in scraped_years:
             print(f"Error: Year '{args.year}' is not available in scraped data.")
@@ -66,7 +67,7 @@ def run_crawlers_sequentially(args, config, project_root, user_input_kind):
             doc_metadata, 
             user_input_kind, 
             year=str(args.year), 
-            month=str(args.month), 
+            month=str(args.month),
             date=str(args.day)
         )
         
@@ -75,7 +76,7 @@ def run_crawlers_sequentially(args, config, project_root, user_input_kind):
         # Step 6: Create the folder structure for the filtered data and get download metadata
         archive_location = config["archive"]["archive_location"]
         all_download_metadata = create_folder_structure(archive_location, filtered_doc_metadata)
-        
+                
         # Step 7: Download the documents
         if all_download_metadata:
             yield runner.crawl(PDFDownloaderSpider, download_metadata=all_download_metadata)
@@ -91,7 +92,7 @@ def run_crawlers_sequentially(args, config, project_root, user_input_kind):
         # yield defer.maybeDeferred(post_crawl_processing, args, config, filtered_doc_metadata, archive_location)
         reactor.stop()
 
-
+# TODO: i have to send filtered_doc_metadata instead of the upload_metadata , otherwise if the create_folder_structure_on_cloud fails , the program stops from there.
 def post_crawl_processing(args, config, filtered_doc_metadata, archive_location):
     """Handle post-crawl processing (Google Drive upload, etc.)"""
     try:
@@ -111,7 +112,7 @@ def post_crawl_processing(args, config, filtered_doc_metadata, archive_location)
                 
         # Filter the available docs
         pdf_only_metadata = filter_pdf_only(upload_metadata)
-        
+                
         # Upload the docs to cloud
         results = upload_local_documents_to_gdrive(
             service, 
@@ -136,28 +137,26 @@ def post_crawl_processing(args, config, filtered_doc_metadata, archive_location)
         for doc in successful_docs:
             print(f"✅ {doc['doc_id']}: {doc['gdrive_file_id']}")
             
-        extracted_texts = extract_text_from_pdf(upload_metadata[-5:])
+        extracted_texts = extract_text_from_pdf(upload_metadata)
         llm_ready_texts = prepare_for_llm_processing(extracted_texts)
         
-        api_key = os.getenv("API_KEY")
+        api_key = config["credentials"]["deepseek_api_key"]
         
-        for doc_id in llm_ready_texts:
-            doc_text = llm_ready_texts[doc_id]["text"]
-            doc_date = llm_ready_texts[doc_id]["doc_date"]
-            print(f"Document ID: {doc_id}")
-            print(f"Document Date: {doc_date}")
-            res = classify_gazette(doc_text, doc_id, api_key)
-            if res["success"]:
-                doc_type = res['type']
-                doc_type_reason = res['reasoning']
-                print(f"Gazette type: {res['type']}")
-                print(f"Reasoning: {res['reasoning']}")
-            else:
-                doc_type = "Error"
-                doc_type_reason = res['reasoning']
-                print(f"Error: {res['reasoning']}")
-            save_classified_doc_metadata(doc_id, doc_type, doc_type_reason, archive_location, args.year, doc_date)
-            print("\n" + "="*80 + "\n") 
+        classified_metadata, classified_metadata_dic = prepare_classified_metadata(llm_ready_texts, api_key)
+            
+        save_classified_doc_metadata(classified_metadata, archive_location, args.year)
         
+        prepared_metadata_to_store = prepare_metadata_for_db(results, classified_metadata_dic)
+        
+        uri = config["db_credentials"]["mongo_db_uri"]
+        
+        client = connect_to_db(uri)
+        
+        if client:
+            db = client["doc_db"]
+            insert_docs_by_year(db, prepared_metadata_to_store, args.year)
+        else:
+            print("❌ Failed uploading to the mongodb")
+            
     except Exception as e:
         print(f"Error during post-processing: {e}")

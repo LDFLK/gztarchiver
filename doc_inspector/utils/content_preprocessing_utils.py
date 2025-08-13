@@ -88,19 +88,28 @@ def extract_text_from_pdf(upload_metadata: List[Dict[str, Any]]) -> Dict[str, st
         # Skip unavailable documents
         if availability == 'Unavailable' or file_name == 'unavailable.json':
             print(f"⚠️  SKIPPED: Document {doc_id} is unavailable")
-            extracted_texts[doc_id] = {"status": "unavailable", "text": "", "error": "Document unavailable"}
+            extracted_texts[doc_id] = {"status": "unavailable", 
+                                       "doc_date": doc_date,
+                                       "text": "", 
+                                       "error": "Document unavailable"}
             continue
         
         # Check if file exists
         if not local_path.exists():
             print(f"❌ ERROR: File not found at {local_path}")
-            extracted_texts[doc_id] = {"status": "error", "text": "", "error": "File not found"}
+            extracted_texts[doc_id] = {"status": "error",
+                                       "doc_date": doc_date,
+                                       "text": "", 
+                                       "error": "File not found"}
             continue
         
         # Check if it's a PDF file
         if not file_name.endswith('.pdf'):
             print(f"⚠️  SKIPPED: {file_name} is not a PDF file")
-            extracted_texts[doc_id] = {"status": "skipped", "text": "", "error": "Not a PDF file"}
+            extracted_texts[doc_id] = {"status": "skipped",
+                                       "doc_date": doc_date,
+                                       "text": "", 
+                                       "error": "Not a PDF file"}
             continue
         
         try:
@@ -138,14 +147,7 @@ def extract_text_from_pdf(upload_metadata: List[Dict[str, Any]]) -> Dict[str, st
                         }
                         print(f"✅ Successfully extracted and cleaned text from {doc_id}")
                         
-                        # Print a preview of the cleaned text
-                        # print(f"\n📋 CLEANED TEXT PREVIEW for {doc_id}:")
                         print("─" * 50)
-                        preview = cleaned_text[:500]  # First 500 characters
-                        # print(cleaned_text)
-                        # if len(cleaned_text) > 500:
-                        #     print("... (truncated)")
-                        # print("─" * 50)
                         print(f"Character count: {len(cleaned_text)}")
                         print(f"Word count (approx): {len(cleaned_text.split())}")
                         
@@ -200,6 +202,7 @@ def prepare_for_llm_processing(extracted_texts: Dict[str, Dict]) -> Dict[str, st
     print(f"\n{'=' * 80}")
     print("PREPARING TEXTS FOR LLM PROCESSING")
     print(f"{'=' * 80}")
+    
     
     for doc_id, doc_data in extracted_texts.items():
         if doc_data["status"] == "success" and doc_data["text"]:

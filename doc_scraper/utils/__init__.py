@@ -4,6 +4,7 @@ from .doc_metadata_utils import filter_doc_metadata, load_doc_metadata_file
 from .archive_folder_utils import create_folder_structure
 from .archive_to_cloud_utils import create_folder_structure_on_cloud, upload_local_documents_to_gdrive, filter_pdf_only, save_upload_results
 from .cloud_credential_utils import get_cloud_credentials
+from .db_utils import prepare_metadata_for_db, connect_to_db, insert_docs_by_year
 
 __all__ = [
     "scrape_years_metadata",
@@ -17,5 +18,8 @@ __all__ = [
     "upload_local_documents_to_gdrive",
     "filter_pdf_only",
     "save_upload_results",
-    "get_cloud_credentials"
+    "get_cloud_credentials",
+    "prepare_metadata_for_db",
+    "connect_to_db",
+    "insert_docs_by_year",
 ]

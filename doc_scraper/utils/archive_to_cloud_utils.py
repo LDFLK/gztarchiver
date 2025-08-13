@@ -273,35 +273,6 @@ def upload_unavailable_metadata(service, doc_metadata, folder_id, doc_id):
         print(f"❌ Error uploading unavailable metadata: {e}")
         raise
 
-
-# Example usage:
-"""
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-
-# Setup Google Drive API service
-service = build('drive', 'v3', credentials=your_credentials)
-
-# Your filtered document metadata
-filtered_docs = [
-    {
-        "doc_id": "1234-56",
-        "date": "2024-01-15",
-        "download_url": "https://example.com/doc_1234-56_E.pdf",
-        "availability": "Available"
-    },
-    # ... more documents
-]
-
-# Create folder structure (None for root, or specify a parent folder ID)
-upload_metadata = create_gdrive_folder_structure(service, filtered_docs, parent_folder_id=None)
-
-# The upload_metadata will contain Google Drive folder IDs for each document
-for item in upload_metadata:
-    print(f"Doc: {item['doc_id']} -> Folder ID: {item['gdrive_folder_id']}")
-"""
-
-
 def upload_local_documents_to_gdrive(service, upload_metadata, max_retries=3, delay_between_uploads=1):
     """
     Upload locally downloaded documents to Google Drive using local_path from upload metadata
@@ -338,6 +309,7 @@ def upload_local_documents_to_gdrive(service, upload_metadata, max_retries=3, de
         folder_path = item.get("gdrive_folder_path")
         availability = item.get("availability")
         local_path = item.get("local_path")
+        download_url = item.get("download_url")
         
         print(f"\n📄 Processing ({i}/{len(upload_metadata)}): {doc_id}")
         print(f"   📁 Folder: {folder_path}")
@@ -378,16 +350,21 @@ def upload_local_documents_to_gdrive(service, upload_metadata, max_retries=3, de
         local_file_path = str(local_path)
         
         # Check if file already exists in the folder
-        if file_exists_in_folder(service, file_name, gdrive_folder_id):
+        is_file_existing, g_drive_id = file_exists_in_folder(service, file_name, gdrive_folder_id)
+        if is_file_existing:
             print(f"   ✅ File already exists, skipping: {file_name}")
             upload_results["skipped_documents"] += 1
+            cloud_file_url = get_gdrive_url_from_file_id(g_drive_id)
             upload_results["upload_details"].append({
                 "doc_id": doc_id,
                 "doc_date": doc_date,
                 "status": "already_exists",
+                "gdrive_file_id": g_drive_id,
+                "gdrive_file_url": cloud_file_url,
                 "folder_path": folder_path,
                 "file_name": file_name,
-                "local_file_path": local_file_path
+                "local_file_path": local_file_path,
+                "download_url" : download_url
             })
             continue
         
@@ -449,15 +426,18 @@ def upload_local_documents_to_gdrive(service, upload_metadata, max_retries=3, de
                 if file_id:
                     print(f"   ✅ Upload successful! File ID: {file_id}")
                     upload_results["successful_uploads"] += 1
+                    cloud_file_url = get_gdrive_url_from_file_id(file_id)
                     upload_results["upload_details"].append({
                         "doc_id": doc_id,
                         "doc_date": doc_date,
                         "status": "success",
                         "gdrive_file_id": file_id,
+                        "gdrive_file_url": cloud_file_url,
                         "folder_path": folder_path,
                         "file_name": file_name,
                         "local_file_path": local_file_path,
-                        "file_size_bytes": file_size
+                        "file_size_bytes": file_size,
+                        "download_url" : download_url
                     })
                     success = True
                     break
@@ -577,7 +557,8 @@ def file_exists_in_folder(service, file_name, folder_id):
         ).execute()
         
         files = results.get('files', [])
-        return len(files) > 0
+        g_drive_id = files[0]['id'] if files else None
+        return len(files) > 0 , g_drive_id
         
     except HttpError as e:
         print(f"   ⚠️ Error checking file existence: {e}")
@@ -653,6 +634,11 @@ def save_upload_results(upload_results, filename):
         upload_results: Results dictionary from upload_local_documents_to_gdrive()
         filename: Output filename
     """
+    
+    # create dir if not exists
+    upload_result_dir = 'upload_results'
+    os.makedirs(upload_result_dir, exist_ok=True)
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename_w_timestamps = filename + timestamp + ".json"
     
@@ -693,45 +679,15 @@ def filter_pdf_only(upload_metadata):
     return pdf_metadata
 
 
-# Example usage:
-"""
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+def get_gdrive_url_from_file_id(file_id):
+    """
+    Convert Google Drive file ID to shareable URL
+    
+    Args:
+        file_id: Google Drive file ID
+        
+    Returns:
+        String: Shareable Google Drive URL
+    """
+    return f"https://drive.google.com/file/d/{file_id}/view"
 
-# Setup Google Drive API service
-service = build('drive', 'v3', credentials=your_credentials)
-
-# Get upload metadata from folder creation
-upload_metadata = create_folder_structure_on_cloud(
-    service, 
-    filtered_doc_metadata, 
-    parent_folder_id="1gAb9u5B3d_ifUOhBuBQbv_lb5Qu18yF7"
-)
-
-# Filter to only PDF files (excluding unavailable.json)
-pdf_only_metadata = filter_pdf_only(upload_metadata)
-
-# Upload documents from local files
-results = upload_local_documents_to_gdrive(
-    service, 
-    pdf_only_metadata,  # or use upload_metadata directly
-    max_retries=3,
-    delay_between_uploads=1
-)
-
-# Save results
-save_upload_results(results, "upload_results.json")
-
-# Access specific results
-print(f"Successful uploads: {results['successful_uploads']}")
-print(f"Failed uploads: {results['failed_uploads']}")
-
-# Get list of successful uploads with their Google Drive file IDs
-successful_docs = [
-    detail for detail in results['upload_details'] 
-    if detail['status'] == 'success'
-]
-
-for doc in successful_docs:
-    print(f"✅ {doc['doc_id']}: {doc['gdrive_file_id']}")
-"""

@@ -1,0 +1,19 @@
+scrape: # Do not change these
+  url: "https://documents.gov.lk/view/extra-gazettes/egz.html"
+
+output: # Do not change these
+  years_json: "meta_data/years.json"
+  doc_metadata_json: "meta_data/doc_metadata.json"
+  upload_results_json: "upload_results/upload_results" 
+
+archive: # Change on your preference
+  archive_location: "path-to-your-local-archive-location" # Local archive location
+  g_drive_parent_folder_id: "path-to-your-google-drive-parent-folder-id" # Parent folder ID of the google drive. 
+
+credentials: # Change on your preference
+  token_path: path-to-your-credentials-file/token.json # Set your credentials file
+  client_secrets_path: path-to-your-credentials-file/credentials.json # Set your credentials file
+  deepseek_api_key: your-deepseek-api-key # Set your deepseek API key
+
+db_credentials:
+  mongo_db_uri: your-mongodb-cloud-credentials-uri # Set your mongodb cloud credentials uri
