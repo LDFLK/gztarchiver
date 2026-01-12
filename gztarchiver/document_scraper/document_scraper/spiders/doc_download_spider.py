@@ -92,7 +92,7 @@ class PDFDownloaderSpider(scrapy.Spider):
                 # New document to download
                 filtered_metadata.append(item)
         
-        # Remove archived documents from download_metadata to avoid rerunning
+        # Remove archived documents from download_metadata to avoid rerunning and remove the unavailable data ------
         self.download_metadata = [item for item in self.download_metadata if item.get("doc_id") not in self.archived_docs]
         
         # Save updated metadata only if documents were removed
@@ -102,7 +102,6 @@ class PDFDownloaderSpider(scrapy.Spider):
         # Process unavailable items separately
         if unavailable_items:
             self.logger.info(f"⚠️ Processing {len(unavailable_items)} unavailable documents:")
-            print(f"⚠️ Processing {len(unavailable_items)} unavailable documents:")
             for item in unavailable_items:
                 # Create folder structure
                 folder_path = item["file_path"].parent
@@ -110,7 +109,6 @@ class PDFDownloaderSpider(scrapy.Spider):
                 # Log to unavailable.csv
                 self.log_status(item, "unavailable_logs")
                 self.logger.info(f"⚠️ Unavailable: {item['doc_id']}")
-                print(f"⚠️ Unavailable: {item['doc_id']}")
         
         self.logger.info(f"📊 Data check summary:")
         self.logger.info(f"   - Total documents: {len(self.download_metadata)}")
@@ -119,6 +117,7 @@ class PDFDownloaderSpider(scrapy.Spider):
         self.logger.info(f"   - Failed (retrying): {retry_count}")
         self.logger.info(f"   - New to download: {len(filtered_metadata) - retry_count}")
         self.logger.info(f"   - Total to download: {len(filtered_metadata)}")
+        
         print(f"📊 Data check summary:")
         print(f"   - Total documents: {len(self.download_metadata)}")
         print(f"   - Already archived (skipped): {skipped_count}")
@@ -168,7 +167,7 @@ class PDFDownloaderSpider(scrapy.Spider):
                 f.write(response.body)
             self.log_status(item, "archived_logs")
             self.logger.info(f"✅ Downloaded: {file_path}")
-            print(f"✅ Downloaded: {file_path}")
+            print(f"  --✅ Downloaded: {file_path}")
         except Exception as e:
             self.log_status(item, "failed_logs")
             self.logger.error(f"❌ Failed to save {file_path}: {e}")
@@ -178,12 +177,26 @@ class PDFDownloaderSpider(scrapy.Spider):
         item = failure.request.meta["item"]
         self.log_status(item, "failed_logs")
         self.logger.error(f"❌ Request failed: {item['download_url']}")
-        print(f"❌ Request failed: {item['download_url']}")
+        print(f"  --❌ Request failed: {item['download_url']}")
         
         # Update availability to Unavailable for failed downloads (e.g., 404 or corrupt links)
         for metadata_item in self.download_metadata:
             if metadata_item["doc_id"] == item["doc_id"]:
                 metadata_item["availability"] = "Unavailable"
+                unavailable_file_path = metadata_item["file_path"].parent / "unavailable.txt"
+                unavailable_object_payload = {
+                    "doc_id": metadata_item["doc_id"],
+                    "date": metadata_item["date"],
+                    "description": metadata_item.get("description") or metadata_item.get("des"),
+                    "download_url": metadata_item["download_url"],
+                    "availability": "Unavailable",
+                }
+                
+                with open(unavailable_file_path, "w") as f:
+                    json.dump(unavailable_object_payload, f, indent=2)
+                    
+                print(f"    Saved unavailable file → {unavailable_file_path}")
+                 
                 break
         
         # Save updated download_metadata to JSON file
@@ -206,7 +219,7 @@ class PDFDownloaderSpider(scrapy.Spider):
             with open(self.output_path, "w", encoding="utf-8") as jsonfile:
                 json.dump(serializable_metadata, jsonfile, indent=4)
             self.logger.info(f"📝 Updated metadata saved to: {self.output_path}")
-            print(f"📝 Updated metadata saved to: {self.output_path}")
+            print(f"    📝 Updated metadata saved to: {self.output_path}")
         except Exception as e:
             self.logger.error(f"❌ Failed to save updated metadata: {e}")
             print(f"❌ Failed to save updated metadata: {e}")

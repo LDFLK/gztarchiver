@@ -1,15 +1,16 @@
-from gztarchiver.doc_scraper.utils import load_years_metadata, get_year_link, hide_logs, load_doc_metadata_file, filter_doc_metadata, create_folder_structure,create_folder_structure_on_cloud, upload_local_documents_to_gdrive, filter_pdf_only, save_upload_results, get_cloud_credentials, prepare_metadata_for_db, connect_to_db, insert_docs_by_year
+from gztarchiver.doc_scraper.utils import load_years_metadata, get_year_link, hide_logs, load_doc_metadata_file, filter_doc_metadata, create_folder_structure, save_metadata_to_filesystem
 from scrapy.crawler import CrawlerRunner
 from twisted.internet import reactor, defer
 from gztarchiver.document_scraper.document_scraper import YearsSpider
 from gztarchiver.document_scraper.document_scraper.spiders import DocMetadataSpider
 from gztarchiver.document_scraper.document_scraper.spiders import PDFDownloaderSpider
-from gztarchiver.doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, save_classified_doc_metadata, prepare_classified_metadata
+from gztarchiver.doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, save_classified_doc_metadata, prepare_classified_metadata, process_failed_documents
 from googleapiclient.discovery import build
 import json
 from pathlib import Path
 from datetime import datetime
-
+import shutil
+import os
 
 @defer.inlineCallbacks
 def run_crawlers_sequentially(args, config, user_input_kind):
@@ -109,8 +110,13 @@ def run_crawlers_sequentially(args, config, user_input_kind):
 def post_crawl_processing(args, config, all_download_metadata, archive_location):
     """Handle post-crawl processing (Data preprocessing, etc.)"""
     try:
-        # Extract data from the pdf files      
-        extracted_texts = extract_text_from_pdf(all_download_metadata)
+     
+        # check for the existing classified metdata logs
+        results = process_failed_documents(archive_location, args.year)
+        
+        total_documents_to_process = all_download_metadata + results
+        # Extract data from the pdf files    
+        extracted_texts = extract_text_from_pdf(total_documents_to_process)
         
         # Preprocess the extracted data to be used on LLM
         llm_ready_texts = prepare_for_llm_processing(extracted_texts)
@@ -118,28 +124,40 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
         divert_api_key = config["credentials"]["divert_deepseek_api_key"]
         divert_url = config["credentials"]["divert_url_deep_seek"]
         
-        # TODO : we can achive this using only a dictionary (no need of bot list and dic)
         # Classification process of the pdfs'
         classified_metadata, classified_metadata_dic = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
+        print(f"{'-' * 80}")
        
-        # BUG : data is not relaiable, issue when saving, rewrite the whole file again in the next run   
+        # TODO : data is not relaiable, issue when saving, rewrite the whole file again in the next run   
         # Saving the classified metadata of the pdfs'
+
+        
         save_classified_doc_metadata(classified_metadata, archive_location, args.year)
         
-        # Processing metadata to upload to the database
-        prepared_metadata_to_store = prepare_metadata_for_db(all_download_metadata, classified_metadata_dic, config)
+      
+        # Processing metadata to save
+        save_metadata_to_filesystem(total_documents_to_process, classified_metadata_dic, config)
         
         # Establish db connection and upload process        
-        uri = config["db_credentials"]["mongo_db_uri"]
+        # uri = config["db_credentials"]["mongo_db_uri"]
         
-        client = connect_to_db(uri)
+        # client = connect_to_db(uri)
         
-        # TODO : update the schema of the backend for CRUD
-        if client:
-            db = client["doc_db"]
-            insert_docs_by_year(db, prepared_metadata_to_store, args.year)
+        # # TODO : update the schema of the backend for CRUD
+        # if client:
+        #     db = client["doc_db"]
+        #     insert_docs_by_year(db, prepared_metadata_to_store, args.year)
+        # else:
+        #     print("❌ Failed uploading to the mongodb")
+        
+        # clear the temp metadata dir used by the program
+        temp_metadata_dir_path = config["output"]["metadata_dir"]
+               
+        if os.path.exists(temp_metadata_dir_path) and os.path.isdir(temp_metadata_dir_path):
+            shutil.rmtree(temp_metadata_dir_path)
+            print("Cleared the temp metadata directory")
         else:
-            print("❌ Failed uploading to the mongodb")
-            
+            print("Temp metadata directory not exists")
+        
     except Exception as e:
         print(f"Error during post-processing: {e}")
