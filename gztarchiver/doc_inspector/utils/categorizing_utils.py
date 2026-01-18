@@ -155,11 +155,12 @@ def process_failed_documents(archive_location, year):
         return results
          
     for record in error_records:
+        file_path_value = record.get('Document Path')
         document_object = {
             "doc_id": record.get('Document ID'),
             "date": record.get('Document Date'),
             "file_path": record.get('Document Path'),
-            "file_name": Path(record.get('Document Path')).name,
+            "file_name": Path(file_path_value).name if file_path_value else None,
             "availability": record.get('Document Availability'),
             "download_url": record.get('Download URL'),
             "des": record.get('Document Description')
