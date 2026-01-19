@@ -4,7 +4,7 @@ A library for extracting and downloading gazettes from resource website
 ## 🛠️ Installation
 
 ```bash
-pip install gztarchiver
+pip install git+https://github.com/LDFLK/gztarchiver.git
 ```
 
 > ⚠️ If installed with `--user`, make sure your Python user scripts directory is in your PATH:
