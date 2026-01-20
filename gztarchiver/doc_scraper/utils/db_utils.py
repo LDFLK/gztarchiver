@@ -58,11 +58,11 @@ def save_metadata_to_filesystem(all_download_metadata, classified_metadata_dic, 
         # Get classification data if available (only for available documents)
         classification = classified_metadata_dic.get(doc_id, {})
         
-        download_url = (
-            doc['download_url']
-            if doc['download_url'] == 'N/A'
-            else str(doc['file_path'])
-        )
+        # download_url = (
+        #     doc['download_url']
+        #     if doc['download_url'] == 'N/A'
+        #     else str(doc['file_path'])
+        # )
         
         document_object = {
             "document_id": doc_id,
@@ -71,7 +71,7 @@ def save_metadata_to_filesystem(all_download_metadata, classified_metadata_dic, 
             "document_type": classification.get('doc_type', "UNAVAILABLE"),
             "reasoning": classification.get('reasoning', "NOT-FOUND"),
             "file_path": str(doc['file_path']),
-            "download_url": download_url,
+            # "download_url": download_url,
             "source": doc['download_url'],
             "availability": doc['availability']   
         }
