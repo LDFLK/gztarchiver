@@ -56,13 +56,14 @@ def create_folder_structure(archive_location, filtered_doc_metadata):
         
         # If unavailable, save metadata to unavailable.txt
         if availability != "Available" or url == "N/A":
-            unavailable_path = folder_path / "unavailable.txt"
-            if unavailable_path.exists():
-                print(f"⚠️  Unavailable.txt already exists: {unavailable_path}, skipping creating again")
-            else:
-                with open(unavailable_path, "w", encoding="utf-8") as f:
-                    json.dump(doc, f, ensure_ascii=False, indent=2)
-                print(f"📄 Unavailable file created: {unavailable_path}")
+            print(f"📄 Unavailable document found: {doc_id} on {date_str}")
+            # unavailable_path = folder_path / "unavailable.txt"
+            # if unavailable_path.exists():
+            #     print(f"⚠️  Unavailable.txt already exists: {unavailable_path}, skipping creating again")
+            # else:
+            #     with open(unavailable_path, "w", encoding="utf-8") as f:
+            #         json.dump(doc, f, ensure_ascii=False, indent=2)
+            #     print(f"📄 Unavailable file created: {unavailable_path}")
             continue
     
     return all_download_metadata

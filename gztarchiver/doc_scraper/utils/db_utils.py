@@ -50,13 +50,16 @@ def save_metadata_to_filesystem(all_download_metadata, classified_metadata_dic, 
     
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     
-
-    
     for doc in all_download_metadata:
         doc_id = doc['doc_id']
         
         # Get classification data if available (only for available documents)
         classification = classified_metadata_dic.get(doc_id, {})
+        
+        document_file_path = Path(doc["file_path"])
+        
+        if doc['availability'] == "Unavailable":
+            doc['file_path'] = "N/A"
         
         document_object = {
             "document_id": doc_id,
@@ -68,8 +71,6 @@ def save_metadata_to_filesystem(all_download_metadata, classified_metadata_dic, 
             "source": doc['download_url'],
             "availability": doc['availability']   
         }
-        
-        document_file_path = Path(doc["file_path"])
         
         parent_folder_of_document = document_file_path.parent
         

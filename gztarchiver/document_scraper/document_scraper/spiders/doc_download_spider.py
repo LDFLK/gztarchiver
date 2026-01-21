@@ -92,7 +92,7 @@ class PDFDownloaderSpider(scrapy.Spider):
                 # New document to download
                 filtered_metadata.append(item)
         
-        # Remove archived documents from download_metadata to avoid rerunning and remove the unavailable data ------
+        # Remove archived documents from download_metadata to avoid rerunning and remove the unavailable data 
         self.download_metadata = [item for item in self.download_metadata if item.get("doc_id") not in self.archived_docs]
         
         # Save updated metadata only if documents were removed
@@ -235,7 +235,11 @@ class PDFDownloaderSpider(scrapy.Spider):
                 writer = csv.writer(csvfile)
                 if not file_exists:
                     writer.writerow(["doc_id", "download_url", "file_path"])
-                writer.writerow([item["doc_id"], item["download_url"], str(item["file_path"])])
+                if item['availability'] == 'Unavailable':
+                    unavailable_dir = item["file_path"].parent
+                    writer.writerow([item["doc_id"], item["download_url"], unavailable_dir])
+                else:
+                    writer.writerow([item["doc_id"], item["download_url"], str(item["file_path"])])
         except Exception as e:
             self.logger.error(f"❌ Failed to log status for {item.get('doc_id', 'unknown')}: {e}")
             print(f"❌ Failed to log status for {item.get('doc_id', 'unknown')}: {e}")
