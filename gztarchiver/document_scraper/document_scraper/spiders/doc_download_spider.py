@@ -175,7 +175,7 @@ class PDFDownloaderSpider(scrapy.Spider):
     
     def handle_failure(self, failure):
         item = failure.request.meta["item"]
-        self.log_status(item, "failed_logs")
+        self.log_status(item, "failed_to_archive")
         self.logger.error(f"❌ Request failed: {item['download_url']}")
         print(f"  --❌ Request failed: {item['download_url']}")
         
