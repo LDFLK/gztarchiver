@@ -46,7 +46,7 @@ class PDFDownloaderSpider(scrapy.Spider):
             if year == 'unknown':
                 continue
             # Get base log directory for this year
-            base_log_dir = Path(items[0]["file_path"]).parents[4] / year
+            base_log_dir = Path(items[0]["file_path"]).parents[4] / year / "records"
             # Check archived logs
             archived_log_file = base_log_dir / "archived_logs.csv"
             if archived_log_file.exists():
@@ -227,7 +227,7 @@ class PDFDownloaderSpider(scrapy.Spider):
     def log_status(self, item, status):
         try:
             year = item["file_path"].parts[-5]  # Extract year from the path
-            base_log_dir = Path(item["file_path"]).parents[4] / year
+            base_log_dir = Path(item["file_path"]).parents[4] / year / "records"
             base_log_dir.mkdir(parents=True, exist_ok=True)
             log_file = base_log_dir / f"{status}.csv"
             file_exists = log_file.exists()

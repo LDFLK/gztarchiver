@@ -125,7 +125,7 @@ def process_failed_documents(archive_location, year):
     error_records = []
     kept_rows = []
     
-    year_folder = Path(archive_location).expanduser() / str(year)
+    year_folder = Path(archive_location).expanduser() / str(year) / "records"
     year_folder.mkdir(parents=True, exist_ok=True)
     
     csv_file_path = year_folder / "classified_metadata.csv"
@@ -179,7 +179,7 @@ def process_failed_documents(archive_location, year):
         
 def save_classified_doc_metadata(metadata_list, archive_location, year):
     
-    year_folder = Path(archive_location).expanduser() / str(year)
+    year_folder = Path(archive_location).expanduser() / str(year) / "records"
     year_folder.mkdir(parents=True, exist_ok=True)
     
     # Set the CSV file path
