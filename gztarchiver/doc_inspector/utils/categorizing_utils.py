@@ -2,6 +2,7 @@ import requests
 from gztarchiver.doc_inspector.LLM import GAZETTE_CLASSIFICATION_PROMPT
 from pathlib import Path
 import csv
+from datetime import datetime, timezone
 
 def classify_gazette(content, doc_id, divert_api_key, divert_url):
     """
@@ -38,6 +39,8 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url):
         "max_tokens": 500,
         "temperature": 0.1
     }
+    
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     
     try:
         # Make the API request
@@ -85,32 +88,35 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url):
         return {
             "document_id": doc_id,
             "type": classification_type,
-            "reasoning": reasoning_line if reasoning_line else llm_response,
+            "categorisation": reasoning_line if reasoning_line else llm_response,
             "raw_response": llm_response,
             "success": True
         }
         
     except requests.exceptions.RequestException as e:
+        print(f"Categorization API request failed: {str(e)}")
         return {
             "document_id": doc_id,
             "type": "NOT CATEGORISED",
-            "reasoning": f"API request failed: {str(e)}",
+            "categorisation": f"Uncategorised as of - {timestamp}.",
             "raw_response": None,
             "success": False
         }
     except KeyError as e:
+        print(f"Unexpected API response format: {str(e)}")
         return {
             "document_id": doc_id,
             "type": "NOT CATEGORISED",
-            "reasoning": f"Unexpected API response format: {str(e)}",
+            "categorisation": f"Uncategorised as of - {timestamp}.",
             "raw_response": response.text if 'response' in locals() else None,
             "success": False
         }
     except Exception as e:
+        print(f"Unexpected error during document categorization: {str(e)}")
         return {
             "document_id": doc_id,
             "type": "NOT CATEGORISED",
-            "reasoning": f"Unexpected error: {str(e)}",
+            "categorisation": f"Uncategorised as of - {timestamp}.",
             "raw_response": None,
             "success": False
         }
@@ -138,7 +144,7 @@ def process_failed_documents(archive_location, year):
         
         for row in reader:
             # Check if the Gazette Type column matches 'Error'
-            if row.get('Gazette Type') == 'Error':
+            if row.get('Gazette Type') == 'Error' or row.get('Gazette Type') == 'NOT CATEGORISED':
                 error_records.append(row)
             else:
                 kept_rows.append(row)
@@ -184,7 +190,7 @@ def save_classified_doc_metadata(metadata_list, archive_location, year):
     with open(csv_file_path, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["Document ID", "Document Date", "Gazette Type", "Reasoning", "Document Path", "Document Availability", "Download URL", "Document Description"])
+            writer.writerow(["Document ID", "Document Date", "Gazette Type", "Categorisation", "Document Path", "Document Availability", "Download URL", "Document Description"])
         for row in metadata_list:
             writer.writerow(row)
 
@@ -265,19 +271,19 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
         res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url)
         if res["success"]:
             doc_type = res['type']
-            doc_type_reason = res['reasoning']
+            doc_type_reason = res['categorisation']
             print(f"Gazette type: {res['type']}")
-            print(f"Reasoning: {res['reasoning']}")
+            print(f"Categorisation: {res['categorisation']}")
         else:
-            doc_type = "Error"
-            doc_type_reason = res['reasoning']
-            print(f"Error: {res['reasoning']}")
+            doc_type = res['type']
+            doc_type_reason = res['categorisation']
+            print(f"Error: {res['categorisation']}")
         # Append metadata for later saving
         classified_metadata.append((doc_id, doc_date, doc_type, doc_type_reason, doc_file_path, doc_availability, doc_download_url, description))
         classified_metadata_dic[doc_id] = {
             'date': doc_date,
             'doc_type': doc_type,
-            'reasoning': doc_type_reason,
+            'categorisation': doc_type_reason,
             'file_path': doc_file_path,
             "availability": doc_availability,
             'download_url': doc_download_url,
