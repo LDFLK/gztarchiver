@@ -48,13 +48,13 @@ class PDFDownloaderSpider(scrapy.Spider):
             # Get base log directory for this year
             base_log_dir = Path(items[0]["file_path"]).parents[4] / year / "records"
             # Check archived logs
-            archived_log_file = base_log_dir / "archived_logs.csv"
+            archived_log_file = base_log_dir / "successfully_archived.csv"
             if archived_log_file.exists():
                 self.archived_docs.update(self._read_log_file(archived_log_file))
                 self.logger.info(f"📋 Found {len(self.archived_docs)} archived documents for {year}")
                 print(f"📋 Found {len(self.archived_docs)} archived documents for {year}")
             # Check failed logs
-            failed_log_file = base_log_dir / "failed_logs.csv"
+            failed_log_file = base_log_dir / "failed_to_archive.csv"
             if failed_log_file.exists():
                 self.failed_docs.update(self._read_log_file(failed_log_file))
                 self.logger.info(f"🔄 Found {len(self.failed_docs)} failed documents for {year}")
@@ -107,7 +107,7 @@ class PDFDownloaderSpider(scrapy.Spider):
                 folder_path = item["file_path"].parent
                 folder_path.mkdir(parents=True, exist_ok=True)
                 # Log to unavailable.csv
-                self.log_status(item, "unavailable_logs")
+                self.log_status(item, "document_unavailable")
                 self.logger.info(f"⚠️ Unavailable: {item['doc_id']}")
         
         self.logger.info(f"📊 Data check summary:")
@@ -165,11 +165,11 @@ class PDFDownloaderSpider(scrapy.Spider):
         try:
             with open(file_path, "wb") as f:
                 f.write(response.body)
-            self.log_status(item, "archived_logs")
+            self.log_status(item, "successfully_archived")
             self.logger.info(f"✅ Downloaded: {file_path}")
             print(f"  --✅ Downloaded: {file_path}")
         except Exception as e:
-            self.log_status(item, "failed_logs")
+            self.log_status(item, "failed_to_archive")
             self.logger.error(f"❌ Failed to save {file_path}: {e}")
             print(f"❌ Failed to save {file_path}: {e}")
     

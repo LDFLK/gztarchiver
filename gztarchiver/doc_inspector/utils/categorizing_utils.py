@@ -128,7 +128,7 @@ def process_failed_documents(archive_location, year):
     year_folder = Path(archive_location).expanduser() / str(year) / "records"
     year_folder.mkdir(parents=True, exist_ok=True)
     
-    csv_file_path = year_folder / "classified_metadata.csv"
+    csv_file_path = year_folder / "document_classification.csv"
     
     if not csv_file_path.exists():
         print(f"Skipping: {csv_file_path} does not exist yet.")
@@ -183,7 +183,7 @@ def save_classified_doc_metadata(metadata_list, archive_location, year):
     year_folder.mkdir(parents=True, exist_ok=True)
     
     # Set the CSV file path
-    csv_file_path = year_folder / "classified_metadata.csv"
+    csv_file_path = year_folder / "document_classification.csv"
     file_exists = csv_file_path.exists()
     
     # Write or append to the CSV file
