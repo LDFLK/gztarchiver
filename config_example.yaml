@@ -7,6 +7,11 @@ output: # Do not change these
   doc_metadata_json: "meta_data/doc_metadata.json"
   upload_results_json: "upload_results/upload_results" 
   download_metadta_json: "meta_data/download_metadata.json"
+  log_record_dir: "records"
+  log_success: "successfully_archived.csv"
+  log_failure: "failed_to_archive.csv"
+  log_unavailable: "document_unavailable.csv"
+  log_classification: "document_classification.csv"
 
 archive: # Change on your preference
   archive_location: "path-to-your-local-archive-location" # Local archive location

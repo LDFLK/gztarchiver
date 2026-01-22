@@ -88,7 +88,7 @@ def run_crawlers_sequentially(args, config, user_input_kind):
             OUTPUT_PATH_DOWNLOAD = Path(output_path_download)
             OUTPUT_PATH_DOWNLOAD.parent.mkdir(parents=True, exist_ok=True)
             
-            yield runner.crawl(PDFDownloaderSpider, download_metadata=all_download_metadata, output_path=str(output_path_download))
+            yield runner.crawl(PDFDownloaderSpider, download_metadata=all_download_metadata, output_path=str(output_path_download), config=config)
             print("✅ All crawlers completed successfully!")
                         
             updated_all_download_metadata = load_doc_metadata_file(output_path_download)
@@ -112,7 +112,7 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
     try:
      
         # check for the existing classified metdata logs
-        results = process_failed_documents(archive_location, args.year)
+        results = process_failed_documents(archive_location, args.year, config)
         
         total_documents_to_process = all_download_metadata + results
         # Extract data from the pdf files    
@@ -132,7 +132,7 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
         # Saving the classified metadata of the pdfs'
 
         
-        save_classified_doc_metadata(classified_metadata, archive_location, args.year)
+        save_classified_doc_metadata(classified_metadata, archive_location, args.year, config)
         
       
         # Processing metadata to save
