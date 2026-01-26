@@ -22,6 +22,3 @@ credentials: # Change on your preference
   divert_deepseek_api_key: your-deepseek-divert-api-key-from-bijira # Set your key
   divert_url_deep_seek: your-deepseek-divert-url-from-bijira # Set your URL
   
-db_credentials:
-  mongo_db_uri: your-mongodb-cloud-credentials-uri # Set your mongodb cloud credentials uri
-
