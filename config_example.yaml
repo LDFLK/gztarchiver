@@ -2,11 +2,10 @@ scrape: # Do not change these
   url: "https://documents.gov.lk/view/extra-gazettes/egz.html"
 
 output: # Do not change these
-  metadata_dir: "meta_data"
-  years_json: "meta_data/years.json"
-  doc_metadata_json: "meta_data/doc_metadata.json"
-  upload_results_json: "upload_results/upload_results" 
-  download_metadta_json: "meta_data/download_metadata.json"
+  metadata_dir: "metadata"
+  years_json: "metadata/years.json"
+  doc_metadata_json: "metadata/doc_metadata.json"
+  download_metadata_json: "metadata/download_metadata.json"
   log_record_dir: "records"
   log_success: "successfully_archived.csv"
   log_failure: "failed_to_archive.csv"
