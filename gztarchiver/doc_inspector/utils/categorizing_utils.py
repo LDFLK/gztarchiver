@@ -121,21 +121,19 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url):
             "success": False
         }
         
-def process_failed_documents(archive_location, year):
+def process_failed_documents(archive_location, year, config):
     error_records = []
     kept_rows = []
     
-    year_folder = Path(archive_location).expanduser() / str(year)
+    year_folder = Path(archive_location).expanduser() / str(year) / config["output"]["log_record_dir"]
     year_folder.mkdir(parents=True, exist_ok=True)
     
-    csv_file_path = year_folder / "classified_metadata.csv"
+    csv_file_path = year_folder / config["output"]["log_classification"]
     
     if not csv_file_path.exists():
         print(f"Skipping: {csv_file_path} does not exist yet.")
         return []
     
-    # open the csv and check for the Gazette Type == 'Error' records.
-    # Then process them one time again and get the result
     
     # 1. Open and read the CSV to find 'Error' records
     with open(csv_file_path, mode='r', newline='', encoding='utf-8') as f:
@@ -174,16 +172,14 @@ def process_failed_documents(archive_location, year):
         results.append(document_object)
         
     return results
-    
-    
         
-def save_classified_doc_metadata(metadata_list, archive_location, year):
+def save_classified_doc_metadata(metadata_list, archive_location, year, config):
     
-    year_folder = Path(archive_location).expanduser() / str(year)
+    year_folder = Path(archive_location).expanduser() / str(year) / config["output"]["log_record_dir"]
     year_folder.mkdir(parents=True, exist_ok=True)
     
     # Set the CSV file path
-    csv_file_path = year_folder / "classified_metadata.csv"
+    csv_file_path = year_folder / config["output"]["log_classification"]
     file_exists = csv_file_path.exists()
     
     # Write or append to the CSV file
@@ -194,62 +190,8 @@ def save_classified_doc_metadata(metadata_list, archive_location, year):
         for row in metadata_list:
             writer.writerow(row)
 
-    print(f"[✓] Metadata saved to {csv_file_path}")
-        
+    print(f"[✓] Metadata saved to {csv_file_path}")  
     return
-
-
-# def save_classified_doc_metadata(metadata_list, archive_location, year):
-#     """
-#     csv_file_path: Path to the CSV file
-#     new_records: A list of dictionaries containing the new metadata
-#     """
-#     year_folder = Path(archive_location).expanduser() / str(year)
-#     year_folder.mkdir(parents=True, exist_ok=True)
-    
-#      # Set the CSV file path
-#     csv_file_path = year_folder / "classified_metadata.csv"
-    
-#     # 1. Define the exact columns you have
-#     fieldnames = [
-#         "Document ID", 
-#         "Document Date", 
-#         "Gazette Type", 
-#         "Reasoning", 
-#         "Document Path", 
-#         "Document Availability", 
-#         "Download URL", 
-#         "Document Description"
-#     ]
-    
-#     existing_data = {}
-
-#     # 2. Read existing records into memory to check for duplicates
-#     if csv_file_path.exists():
-#         with open(csv_file_path, mode='r', newline='', encoding='utf-8') as f:
-#             reader = csv.DictReader(f)
-#             for row in reader:
-#                 doc_id = row.get("Document ID")
-#                 if doc_id:
-#                     # Store existing row using ID as key
-#                     existing_data[doc_id] = row
-
-#     # 3. Update or Add new records
-#     for record in metadata_list:
-#         doc_id = record.get("Document ID")
-#         if doc_id:
-#             # This replaces the old record with the same ID or adds a new one
-#             existing_data[doc_id] = record
-
-#     # 4. Write the merged data back to the CSV
-#     # We use 'w' to overwrite the file with the updated unique set of records
-#     with open(csv_file_path, mode='w', newline='', encoding='utf-8') as f:
-#         writer = csv.DictWriter(f, fieldnames=fieldnames)
-#         writer.writeheader()
-#         writer.writerows(existing_data.values())
-
-#     print(f"Metadata updated successfully in {csv_file_path}")
-
 
 def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
     classified_metadata = []
