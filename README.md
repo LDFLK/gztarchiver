@@ -9,8 +9,6 @@ pip install git+https://github.com/LDFLK/gztarchiver.git
 
 ## How It Works
 
-Let me tell you how my program works! The process is straightforward and involves three main steps:
-
 ### Step-by-Step Workflow
 
 **Step 1: Create & Configure YAML File** ⚙️
