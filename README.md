@@ -1,8 +1,25 @@
 # Gztarchiver 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Code of Conduct](https://img.shields.io/badge/Code%20of%20Conduct-Contributor%20Covenant-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Security](https://img.shields.io/badge/Security-Policy-green.svg)](SECURITY.md) [![Contributing](https://img.shields.io/badge/Contributing-Guidelines-blue.svg)](CONTRIBUTING.md)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Code of Conduct](https://img.shields.io/badge/Code%20of%20Conduct-Contributor-ff69b4.svg)](CODE_OF_CONDUCT.md) [![Security](https://img.shields.io/badge/Security-Policy-green.svg)](SECURITY.md) [![Contributing](https://img.shields.io/badge/Contributing-Guidelines-blue.svg)](CONTRIBUTING.md)
 
-## Installation
+Gztarchiver is a python tool built to archive, categorise and collect metadata on  government documents.
 
+## Features
+
+- **Document Categorisation**: Categorise documents based on their content.
+- **Smart filtering**: Filter by year, month, day, and language.
+- **Organized storage**: Files saved in structured folders: `year/month/day/gazette_id/`
+- **Get new updates**: Can get new updates from the source.
+- **Resume capability**: If interrupted, run the same command again to resume downloads.
+- **Progress tracking**: Real-time download progress with statistics.
+- **File validation**: Automatic validation of downloaded PDF files.
+- **Get new updates**: Can get new updates from the source.
+- **Comprehensive logging**: Detailed logs for successful, failed, unavailable and categorised documents.
+- **Error handling**: Automatic retry for failed downloads and check for unavailable documents and re-try thm.
+
+
+## Getting Started
+
+### Installation
 ```bash
 pip install git+https://github.com/LDFLK/gztarchiver.git
 ```
@@ -11,12 +28,12 @@ pip install git+https://github.com/LDFLK/gztarchiver.git
 
 ### Step-by-Step Workflow
 
-**Step 1: Create & Configure YAML File** ⚙️
+**Step 1: Create & Configure YAML File** 
 - Download the example [``config example``](config_example.yaml) file from the repository.
 - Edit the configurations to specify your download preferences, storage locations, and other settings
 - This file acts as the control center for your archiving operations
 
-**Step 2: Run the Program** 🏃‍♂️
+**Step 2: Run the Program** 
 - Finally, execute the program using the command-line interface with your desired parameters. (Check the usage section)
 - Sit back and watch as your gazettes are systematically archived and categorized!
 
@@ -62,17 +79,6 @@ gztarchiver --year 2023 --month 06 --day 15 --lang en --config path-to-the-confi
 | `si` | Sinhala |
 | `ta` | Tamil |
 
-
-## Features
-
-- **Resume capability**: If interrupted, run the same command again to resume downloads.
-- **Progress tracking**: Real-time download progress with statistics.
-- **Smart filtering**: Filter by year, month, day, and language.
-- **File validation**: Automatic validation of downloaded PDF files.
-- **Get new updates**: Can get new updates from the source.
-- **Organized storage**: Files saved in structured folders: `year/month/day/gazette_id/`
-- **Comprehensive logging**: Detailed logs for successful, failed, unavailable and categorised documents.
-- **Error handling**: Automatic retry for failed downloads and check for unavailable documents and re-try thm.
 
 ## Output Structure
 
