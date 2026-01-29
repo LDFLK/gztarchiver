@@ -20,7 +20,7 @@ Gztarchiver is a python tool built to archive, categorise and collect metadata o
 ## Getting Started
 Please see our [Getting Started Guide](GETTING_STARTED.md).
 ## Contributing
-Please see our [Contributing Guide](SECURITY.md).
+Please see our [Contributing Guide](CONTRIBUTING.md).
 ## Code of Conduct
 Please see our [Code of Conduct](CODE_OF_CONDUCT.md).
 ## Security
