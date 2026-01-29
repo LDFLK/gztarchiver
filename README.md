@@ -7,7 +7,7 @@ Gztarchiver is a python tool built to archive, categorise and collect metadata o
 
 | Feature | Description |
 |---------|-------------|
-| Document Categorisation | Categorise documents based on their content. |
+| Document Categorization | Categorize documents based on their content. |
 | Smart Filtering | Filter by year, month, day, and language. |
 | Organized Storage | Files saved in structured folders: `year/month/day/gazette_id/` |
 | Get New Updates | Can get new updates from the source. |
@@ -31,6 +31,3 @@ Distributed under the Apache 2.0 License. See [License](LICENSE) for more inform
 Checkout our [Archives](https://archives.opendata.lk/) application. We made this document archive using this tool.
 
 ---
-<p align="center">
-  Made with ❤️ and too many commits.
-</p>
