@@ -27,13 +27,10 @@ There are many ways to contribute to this project:
 
 ### Development Setup
 
-<!-- Provide step-by-step instructions to set up the development environment -->
-<!-- Example:
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/project.git`
+2. Clone your fork: `git clone https://github.com/your-username/gztarchiver.git`
 3. Install dependencies: `pip install -r requirements.txt`
 4. Create a branch: `git checkout -b feature/your-feature-name`
--->
 
 ## Making Changes
 
