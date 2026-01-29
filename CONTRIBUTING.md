@@ -28,7 +28,7 @@ There are many ways to contribute to this project:
 ### Development Setup
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/LDFLK/gztarchiver.git`
+2. Clone your fork: `git clone https://github.com/your-username/gztarchiver.git`
 3. Install dependencies: `pip install -r requirements.txt`
 4. Create a branch: `git checkout -b feature/your-feature-name`
 
