@@ -5,10 +5,7 @@ from gztarchiver.document_scraper.document_scraper import YearsSpider
 from gztarchiver.document_scraper.document_scraper.spiders import DocMetadataSpider
 from gztarchiver.document_scraper.document_scraper.spiders import PDFDownloaderSpider
 from gztarchiver.doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, save_classified_doc_metadata, prepare_classified_metadata, process_failed_documents
-from googleapiclient.discovery import build
-import json
 from pathlib import Path
-from datetime import datetime
 import shutil
 import os
 
@@ -137,18 +134,6 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
       
         # Processing metadata to save
         save_metadata_to_filesystem(total_documents_to_process, classified_metadata_dic, config)
-        
-        # Establish db connection and upload process        
-        # uri = config["db_credentials"]["mongo_db_uri"]
-        
-        # client = connect_to_db(uri)
-        
-        # # TODO : update the schema of the backend for CRUD
-        # if client:
-        #     db = client["doc_db"]
-        #     insert_docs_by_year(db, prepared_metadata_to_store, args.year)
-        # else:
-        #     print("❌ Failed uploading to the mongodb")
         
         # clear the temp metadata dir used by the program
         temp_metadata_dir_path = config["output"]["metadata_dir"]

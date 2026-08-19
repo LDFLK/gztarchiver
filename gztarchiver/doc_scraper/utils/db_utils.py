@@ -1,49 +1,6 @@
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
 from datetime import datetime, timezone
 from pathlib import Path
 import json
-
-def connect_to_db(mongo_uri):
-    try:
-        client = MongoClient(mongo_uri)
-        
-        # Attempt to connect to the server
-        client.admin.command('ping')
-        print("✅ Connected to MongoDB successfully.")
-
-        return client
-
-    except ConnectionFailure as e:
-        print("❌ Failed to connect to MongoDB:", e)
-        return None
-
-def insert_docs_by_year(db, prepared_metadata_to_store, year):
-    for doc in prepared_metadata_to_store:
-        try:
-            # Extract year from the document_date
-            collection_name = f"gazettes_{year}"
-            collection = db[collection_name]
-
-            # Check if document already exists in the collection
-            existing_doc = collection.find_one({"document_id": doc['document_id']})
-            
-            if existing_doc:
-                # Update the existing document with new data
-                result = collection.update_one(
-                    {"document_id": doc['document_id']},
-                    {"$set": doc}
-                )
-                print(f"🔄 Updated {doc['document_id']} in {collection_name}, matched: {result.matched_count}")
-            else:
-                # Insert the document if it doesn't exist
-                result = collection.insert_one(doc)
-                print(f"📄 Inserted {doc['document_id']} into {collection_name}, ID: {result.inserted_id}")
-
-        except Exception as e:
-            print(f"❌ Failed to insert/update {doc['document_id']}: {e}")
-    
-    return
 
 def save_metadata_to_filesystem(all_download_metadata, classified_metadata_dic, config):
     merged_output = []
