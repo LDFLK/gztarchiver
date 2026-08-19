@@ -18,24 +18,16 @@ pip install gztarchiver
 
 ## 🚀 How It Works
 
-Let me tell you how my program works! The process is straightforward and involves three main steps:
-
 ### 📋 Step-by-Step Workflow
 
-**Step 1: Setup Cloud Archive** 🌐
-- First, you need to set up Google Cloud credentials to enable cloud storage functionality
-- This involves creating a Google Cloud project, enabling the Drive API, and downloading your `credentials.json` file
-- Save the credentials in a dedicated folder for security
-- Add the credentials paths in step 2
-
-**Step 2: Create & Configure YAML File** ⚙️
+**Step 1: Create & Configure YAML File** ⚙️
 - Download the example `config.yaml` file from the repository and edit it according to your preferences [download](config_example.yaml)
-- Edit this configuration file to specify your download preferences, storage locations, and other settings
+- Edit this configuration file to specify your download preferences, archive storage locations, and other settings
 - This file acts as the control center for your archiving operations
 
-**Step 3: Run the Program** 🏃‍♂️
+**Step 2: Run the Program** 🏃‍♂️
 - Finally, execute the program using the command-line interface with your desired parameters
-- The program will use your cloud credentials and configuration to start downloading and organizing gazette files
+- The program will use your configuration to start downloading, organizing, and classifying gazette files
 - Sit back and watch as your gazettes are systematically archived!
 
 ---
@@ -81,30 +73,6 @@ gztarchiver --year 2023 --month 06 --day 15 --lang en --config path-to-the-confi
 | `si` | Sinhala |
 | `ta` | Tamil |
 
-## ☁️ Setup Cloud Archive
-
-**1. Go to Google Cloud Console**
-```bash
-https://console.cloud.google.com/
-```
-
-**2. Create a new project**
-
-**3. Enable the Google Drive API in that project**
-
-**4. Go to APIs & Services > Credentials**
-
-**5. Click "Create Credentials" → "OAuth Client ID"**
-
-**6. Choose Desktop App**
-
-**7. Download the file — it's called `credentials.json`**
-
-**8. Create a folder called `credentials` somewhere in your computer**
-
-**9. Place the `credentials.json` inside the `credentials`**
-
-**10. Copy the path and update the config.yaml file**
 
 ## ✨ Features
 

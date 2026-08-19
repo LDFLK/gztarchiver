@@ -5,10 +5,7 @@ from gztarchiver.document_scraper.document_scraper import YearsSpider
 from gztarchiver.document_scraper.document_scraper.spiders import DocMetadataSpider
 from gztarchiver.document_scraper.document_scraper.spiders import PDFDownloaderSpider
 from gztarchiver.doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, save_classified_doc_metadata, prepare_classified_metadata, process_failed_documents
-from googleapiclient.discovery import build
-import json
 from pathlib import Path
-from datetime import datetime
 import shutil
 import os
 
