@@ -107,30 +107,35 @@ def run_crawlers_sequentially(args, config, user_input_kind):
 def post_crawl_processing(args, config, all_download_metadata, archive_location):
     """Handle post-crawl processing (Data preprocessing, etc.)"""
     try:
-     
-        # check for the existing classified metdata logs
-        results = process_failed_documents(archive_location, args.year, config)
-        
-        total_documents_to_process = all_download_metadata + results
-        # Extract data from the pdf files    
-        extracted_texts = extract_text_from_pdf(total_documents_to_process)
-        
-        # Preprocess the extracted data to be used on LLM
-        llm_ready_texts = prepare_for_llm_processing(extracted_texts)
-        
-        divert_api_key = config["credentials"]["divert_deepseek_api_key"]
-        divert_url = config["credentials"]["divert_url_deep_seek"]
-        
-        # Classification process of the pdfs'
-        classified_metadata, classified_metadata_dic = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
-        print(f"{'-' * 80}")
-       
-        # TODO : data is not relaiable, issue when saving, rewrite the whole file again in the next run   
-        # Saving the classified metadata of the pdfs'
+        classified_metadata_dic = {}
+        total_documents_to_process = all_download_metadata
 
-        
-        save_classified_doc_metadata(classified_metadata, archive_location, args.year, config)
-        
+        # Check if classification is enabled in config (defaults to True)
+        classification_enabled = config.get("classification", {}).get("enable", True)
+
+        if classification_enabled:
+            # check for the existing classified metdata logs
+            results = process_failed_documents(archive_location, args.year, config)
+            
+            total_documents_to_process = all_download_metadata + results
+            # Extract data from the pdf files    
+            extracted_texts = extract_text_from_pdf(total_documents_to_process)
+            
+            # Preprocess the extracted data to be used on LLM
+            llm_ready_texts = prepare_for_llm_processing(extracted_texts)
+            
+            divert_api_key = config["credentials"]["divert_deepseek_api_key"]
+            divert_url = config["credentials"]["divert_url_deep_seek"]
+            
+            # Classification process of the pdfs'
+            classified_metadata, classified_metadata_dic = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
+            print(f"{'-' * 80}")
+           
+            # TODO : data is not relaiable, issue when saving, rewrite the whole file again in the next run   
+            # Saving the classified metadata of the pdfs'
+            save_classified_doc_metadata(classified_metadata, archive_location, args.year, config)
+        else:
+            print("\nDocument classification is disabled in configuration. Skipping LLM processing.\n")
       
         # Processing metadata to save
         save_metadata_to_filesystem(total_documents_to_process, classified_metadata_dic, config)
