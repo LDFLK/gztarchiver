@@ -135,18 +135,6 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
         # Processing metadata to save
         save_metadata_to_filesystem(total_documents_to_process, classified_metadata_dic, config)
         
-        # Establish db connection and upload process        
-        # uri = config["db_credentials"]["mongo_db_uri"]
-        
-        # client = connect_to_db(uri)
-        
-        # # TODO : update the schema of the backend for CRUD
-        # if client:
-        #     db = client["doc_db"]
-        #     insert_docs_by_year(db, prepared_metadata_to_store, args.year)
-        # else:
-        #     print("❌ Failed uploading to the mongodb")
-        
         # clear the temp metadata dir used by the program
         temp_metadata_dir_path = config["output"]["metadata_dir"]
                
