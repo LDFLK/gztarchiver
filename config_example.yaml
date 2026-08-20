@@ -20,4 +20,7 @@ archive: # Change on your preference
 credentials: # Change on your preference
   divert_deepseek_api_key: your-deepseek-divert-api-key-from-bijira # Set your key
   divert_url_deep_seek: your-deepseek-divert-url-from-bijira # Set your URL
-  
+
+classification: # Change on your preference
+  enable: true # Set to false to skip LLM extraction & categorization
+

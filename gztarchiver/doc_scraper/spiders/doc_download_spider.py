@@ -6,8 +6,6 @@ import json
 class PDFDownloaderSpider(scrapy.Spider):
     name = "pdf_downloader"
     
-    
-    
     custom_settings = {
         "DOWNLOAD_DELAY": 1.0,
         "CONCURRENT_REQUESTS": 2,
@@ -145,8 +143,8 @@ class PDFDownloaderSpider(scrapy.Spider):
             self.logger.error(f"❌ Error reading log file {log_file_path}: {e}")
             print(f"❌ Error reading log file {log_file_path}: {e}")
         return doc_ids
-    
-    def start_requests(self):
+
+    async def start(self):
         # Check available data before starting downloads
         self.logger.info("🔍 Checking available data...")
         filtered_metadata = self.check_available_data()

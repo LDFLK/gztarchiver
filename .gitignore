@@ -6,4 +6,5 @@ gztarchiver.egg-info/
 build/
 doc-archive/
 dist/
+__pycache__
 

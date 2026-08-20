@@ -7,9 +7,6 @@
 # version = "0.1.0"
 # description = "Sri Lankan Gazette Archiver"
 # requires-python = ">=3.7"
-# authors = [
-#     { name="Yasandu Imanjith", email="yasanduyaka2005@gmail.com" }
-# ]
 
 # [project.scripts]
 # gztarchiver = "gztarchiver.main:main"
@@ -29,18 +26,13 @@ authors = [
 dependencies = [
     "PyYAML>=6.0.0",     
     "scrapy>=2.13.0",               
-    "google-api-python-client>=2.170.0",
-    "google-auth-oauthlib>=1.2.0",   
-    "google-auth>=2.0.0",              
     "requests>=2.32.0",                 
     "PyPDF2>=3.0.0", 
-    "pymongo>=4.0.0",
     "pyfiglet>=0.8",  
     "termcolor>=2.3.0",
     "PyMuPDF>=1.26.3",
-    "protobuf>=3.20.2,<6.0",
     "packaging>=21,<25"               
-]
+] 
 
 [project.optional-dependencies]
 # Optional: Add development dependencies
@@ -52,3 +44,7 @@ dev = [
 
 [project.scripts]
 gztarchiver = "gztarchiver.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gztarchiver*"]
