@@ -1,9 +1,7 @@
 from gztarchiver.doc_scraper.utils import load_years_metadata, get_year_link, hide_logs, load_doc_metadata_file, filter_doc_metadata, create_folder_structure, save_metadata_to_filesystem
 from scrapy.crawler import CrawlerRunner
 from twisted.internet import reactor, defer
-from gztarchiver.document_scraper.document_scraper import YearsSpider
-from gztarchiver.document_scraper.document_scraper.spiders import DocMetadataSpider
-from gztarchiver.document_scraper.document_scraper.spiders import PDFDownloaderSpider
+from gztarchiver.doc_scraper.spiders import YearsSpider, DocMetadataSpider, PDFDownloaderSpider
 from gztarchiver.doc_inspector.utils import extract_text_from_pdf, prepare_for_llm_processing, save_classified_doc_metadata, prepare_classified_metadata, process_failed_documents
 from pathlib import Path
 import shutil

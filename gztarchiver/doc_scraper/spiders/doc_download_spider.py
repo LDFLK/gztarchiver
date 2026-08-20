@@ -6,8 +6,6 @@ import json
 class PDFDownloaderSpider(scrapy.Spider):
     name = "pdf_downloader"
     
-    
-    
     custom_settings = {
         "DOWNLOAD_DELAY": 1.0,
         "CONCURRENT_REQUESTS": 2,
