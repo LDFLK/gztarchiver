@@ -145,8 +145,8 @@ class PDFDownloaderSpider(scrapy.Spider):
             self.logger.error(f"❌ Error reading log file {log_file_path}: {e}")
             print(f"❌ Error reading log file {log_file_path}: {e}")
         return doc_ids
-    
-    def start_requests(self):
+
+    async def start(self):
         # Check available data before starting downloads
         self.logger.info("🔍 Checking available data...")
         filtered_metadata = self.check_available_data()

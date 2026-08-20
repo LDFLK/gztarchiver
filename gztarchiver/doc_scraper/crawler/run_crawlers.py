@@ -114,7 +114,7 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
         classification_enabled = config.get("classification", {}).get("enable", True)
 
         if classification_enabled:
-            # check for the existing classified metdata logs
+            # check for the existing classified metadata logs
             results = process_failed_documents(archive_location, args.year, config)
             
             total_documents_to_process = all_download_metadata + results
@@ -131,7 +131,7 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
             classified_metadata, classified_metadata_dic = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
             print(f"{'-' * 80}")
            
-            # TODO : data is not relaiable, issue when saving, rewrite the whole file again in the next run   
+            # TODO : data is not reliable, issue when saving, rewrite the whole file again in the next run   
             # Saving the classified metadata of the pdfs'
             save_classified_doc_metadata(classified_metadata, archive_location, args.year, config)
         else:

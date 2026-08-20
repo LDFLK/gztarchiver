@@ -32,7 +32,7 @@ dependencies = [
     "termcolor>=2.3.0",
     "PyMuPDF>=1.26.3",
     "packaging>=21,<25"               
-]
+] 
 
 [project.optional-dependencies]
 # Optional: Add development dependencies
@@ -44,3 +44,7 @@ dev = [
 
 [project.scripts]
 gztarchiver = "gztarchiver.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gztarchiver*"]
