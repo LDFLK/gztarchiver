@@ -42,7 +42,7 @@ def main():
 
     # Resolve crawler version (CLI flag takes precedence, defaults to v2)
     crawler_version = (args.crawler_version or DEFAULT_VERSION).lower()
-    print(f"🚀 Using Crawler Version: {crawler_version.upper()}")
+    print(f"Using Crawler Version: {crawler_version.upper()}")
 
     # Retrieve and execute selected pipeline
     try:
