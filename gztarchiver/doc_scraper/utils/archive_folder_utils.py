@@ -1,12 +1,9 @@
 from pathlib import Path
 import json
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from gztarchiver.models.v2.gazette import GazetteEntry
+from gztarchiver.models.v2.gazette import GazetteEntry
 
 def build_download_metadata_v2(
-    entries: list["GazetteEntry"],
+    entries: list[GazetteEntry],
     archive_location: Path,
     archive_languages: list[str],
     cdn_proxy_url: str,
@@ -26,16 +23,9 @@ def build_download_metadata_v2(
     Returns:
         List of download_metadata dicts expected by PDFDownloaderSpider.
     """
-    _lang_suffix_map = {
-        "ENGLISH": "english",
-        "SINHALA": "sinhala",
-        "TAMIL": "tamil",
-    }
-
     all_download_metadata = []
 
     for entry in entries:
-        # Sanitise gazetteNoText ("2471/35" → "2471-35") so it is safe in paths
         doc_id = entry.gazetteNoText.replace("/", "-")
         date_str = entry.date.strftime("%Y-%m-%d")
         year, month, day = date_str.split("-")
@@ -51,7 +41,7 @@ def build_download_metadata_v2(
             if content.language not in archive_languages:
                 continue
 
-            lang_suffix = _lang_suffix_map.get(content.language, content.language.lower())
+            lang_suffix = content.language.lower()
             download_url = f"{cdn_proxy_url}{content.uploadedFile}"
 
             file_name = f"{doc_id}_{lang_suffix}.pdf"

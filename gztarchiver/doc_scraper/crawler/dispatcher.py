@@ -15,4 +15,4 @@ def get_crawler_pipeline(version=None):
         raise ValueError(
             f"Unsupported crawler version '{selected_version}'. Supported versions: {list(PIPELINES.keys())}"
         )
-    return PIPELINES[selected_version]
+    return PIPELINES[selected_version], selected_version

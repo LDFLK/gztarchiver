@@ -46,6 +46,7 @@ def run_v2_pipeline(args, config, user_input_kind):
     cdn_proxy_url = v2_config.get("cdn_proxy_url", "https://documents.gov.lk/api/content-file-proxy?file=")
     api_endpoint = v2_config.get("api_endpoint", "http://gvp-api:4500/website-data/extra-gazette/get-all")
     archive_languages = v2_config.get("languages", ["ENGLISH"])
+    lang_map = {"en": "ENGLISH", "si": "SINHALA", "ta": "TAMIL"}
 
     # Resolve paths
     output_path_download = config["output"]["download_metadata_json"]
@@ -145,12 +146,6 @@ def run_v2_pipeline(args, config, user_input_kind):
                 # The body is newline-delimited frames, each prefixed with `<index>:`:
                 #   0:{"a":"$@1","f":"","b":"..."}  ← routing metadata
                 #   1:{"data":[...], "count":...}    ← actual payload
-                #
-                # Two important details:
-                #   - Force UTF-8: response.text defaults to ISO-8859-1 for text/x-component,
-                #     which mangles Tamil/Sinhala chars (e.g. byte 0x85 becomes U+0085 NEXT LINE).
-                #   - Use split('\n') not splitlines(): splitlines() treats U+0085 as a line
-                #     break, splitting the large JSON frame mid-string on Tamil filenames.
                 body = response.content.decode("utf-8")
                 frames: dict = {}
                 for line in body.split("\n"):
@@ -185,7 +180,7 @@ def run_v2_pipeline(args, config, user_input_kind):
                     if _matches_filter(entry_date, user_input_kind):
                         collected.append(entry)
 
-                # Early-stop: the last entry on this page is older than anything we need
+                # Early-stop: the last entry on this page is older
                 last_entry_date = entries[-1].date.date()
                 total_pages = page_response.pagination.totalPages
                 print(
@@ -222,8 +217,7 @@ def run_v2_pipeline(args, config, user_input_kind):
             return
 
         # Step 4 — Filter by language
-        lang_map = {"en": "ENGLISH", "si": "SINHALA", "ta": "TAMIL"}
-        requested_lang = lang_map.get(str(args.lang), str(args.lang).upper())
+        requested_lang = lang_map.get(str(args.lang), "ENGLISH")
 
         # Only keep entries that have at least one content in the requested lang
         lang_filtered = [
@@ -265,7 +259,7 @@ def run_v2_pipeline(args, config, user_input_kind):
             output_path=str(output_path_download),
             config=config,
         )
-        print("All downloads completed.")
+        print("All downloads completed successfully.")
 
         # Reload from file — the spider updates availability for any failed
         # downloads before saving, so this reflects the actual final state.

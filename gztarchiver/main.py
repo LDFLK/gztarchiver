@@ -8,7 +8,7 @@ from .doc_scraper.cmd import parse_args, identify_input_kind
 from pathlib import Path
 import yaml
 from twisted.internet import reactor, defer
-from .doc_scraper.crawler import get_crawler_pipeline, DEFAULT_VERSION
+from .doc_scraper.crawler import get_crawler_pipeline
 from pyfiglet import figlet_format
 from termcolor import colored
     
@@ -40,13 +40,10 @@ def main():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    # Resolve crawler version (CLI flag takes precedence, defaults to v2)
-    crawler_version = (args.crawler_version or DEFAULT_VERSION).lower()
-    print(f"Using Crawler Version: {crawler_version.upper()}")
-
     # Retrieve and execute selected pipeline
     try:
-        pipeline = get_crawler_pipeline(crawler_version)
+        pipeline, version = get_crawler_pipeline()
+        print(f"Using Crawler Version: {version.upper()}")
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -60,9 +57,6 @@ def main():
 
     reactor.callWhenRunning(_execute)
     reactor.run()
-
-
-
 
 if __name__ == "__main__":
     main()
