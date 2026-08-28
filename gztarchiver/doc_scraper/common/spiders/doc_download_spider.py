@@ -203,7 +203,9 @@ class PDFDownloaderSpider(scrapy.Spider):
                 item_copy["file_path"] = str(item_copy["file_path"])  # Convert PosixPath to string
                 serializable_metadata.append(item_copy)
                 
-            with open(self.output_path, "w", encoding="utf-8") as jsonfile:
+            output_file = Path(self.output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, "w", encoding="utf-8") as jsonfile:
                 json.dump(serializable_metadata, jsonfile, indent=4)
             self.logger.info(f"📝 Updated metadata saved to: {self.output_path}")
             print(f"    📝 Updated metadata saved to: {self.output_path}")

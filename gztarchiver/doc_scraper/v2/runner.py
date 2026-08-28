@@ -139,6 +139,7 @@ def run_v2_pipeline(args, config, user_input_kind):
                     scrape_url,
                     headers=headers,
                     json=payload,
+                    timeout=(30, 90),
                 )
                 response.raise_for_status()
 

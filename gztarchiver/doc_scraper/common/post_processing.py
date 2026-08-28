@@ -58,3 +58,4 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
         
     except Exception as e:
         print(f"Error during post-processing: {e}")
+        raise
