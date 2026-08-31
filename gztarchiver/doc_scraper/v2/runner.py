@@ -69,7 +69,16 @@ def run_v2_pipeline(args, config, user_input_kind):
             captured_token = None
 
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=[
+                    "--no-sandbox",
+                    "--disable-gpu",
+                    "--disable-dev-shm-usage",
+                    "--disable-setuid-sandbox",
+                    "--no-zygote"
+                    ]
+                )
                 try:
                     page = browser.new_page()
 
