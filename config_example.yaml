@@ -4,6 +4,7 @@ scrape: # Shared scrape configuration
 v2: # V2 crawler specific configs
   cdn_proxy_url: "https://documents.gov.lk/api/content-file-proxy?file="
   api_endpoint: "http://gvp-api:4500/website-data/extra-gazette/get-all"
+  next_action_token: "7f679bcdf1c679caa0f2356b97387098c39c41312a" #service next action header in the client side (extra_gazettes API call)
   languages:
     - "ENGLISH"
 
