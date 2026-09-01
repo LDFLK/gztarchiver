@@ -17,7 +17,6 @@ from gztarchiver.doc_scraper.utils import (
 from gztarchiver.doc_scraper.common.post_processing import post_crawl_processing
 from gztarchiver.doc_scraper.common.spiders import PDFDownloaderSpider
 from gztarchiver.models.v2 import GazetteApiResponse, GazetteEntry
-from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ def run_v2_pipeline(args, config, user_input_kind):
     V2 Crawler pipeline entrypoint.
 
     Steps:
-      1. Intercept the Next.js `next-action` token via Playwright.
+      1. Resolve the Next.js `next-action` token from config.yaml.
       2. Smart-paginate the API with early-stop once past the target date range.
       3. Validate the response with Pydantic.
       4. Filter entries matching --year / --month / --day / --lang.
@@ -59,50 +58,13 @@ def run_v2_pipeline(args, config, user_input_kind):
 
     try:
 
-        # Step 1 — Intercept the Next.js server-action token via Playwright.
-        def intercept_next_action_token() -> str | None:
-            """
-            Opens a headless browser and captures the `next-action` header
-            from the first outgoing POST request fired during JS hydration.
-            This token is required to authenticate subsequent direct API calls.
-            """
-            captured_token = None
-
-            with sync_playwright() as p:
-                browser = p.chromium.launch(
-                    headless=True,
-                    args=[
-                    "--no-sandbox",
-                    "--disable-gpu",
-                    "--disable-dev-shm-usage",
-                    "--disable-setuid-sandbox",
-                    "--no-zygote"
-                    ]
-                )
-                try:
-                    page = browser.new_page()
-
-                    # Wait specifically for the first request carrying a `next-action`
-                    # header (a Next.js server-action POST that fires automatically
-                    # during JS hydration).
-                    with page.expect_request(
-                        lambda r: "next-action" in r.headers,
-                        timeout=90000
-                    ) as req_info:
-                        page.goto(scrape_url, wait_until="commit", timeout=90000)
-
-                    captured_token = req_info.value.headers["next-action"]
-                    print("captured next action token", captured_token)
-                finally:
-                    browser.close()
-
-            return captured_token
-
-        token = intercept_next_action_token()
-
+        # Step 1 — Retrieve the Next.js server-action token from configuration
+        token = v2_config.get("next_action_token")
         if not token:
-            print("next-action token not found")
+            print("Error: 'next_action_token' is not configured in config.yaml under 'v2:'.")
             return None
+
+        print(f"captured next action token {token}")
 
         # Step 2: fetch required data from the API
         def _build_stop_date(user_input_kind: str) -> date_type:
