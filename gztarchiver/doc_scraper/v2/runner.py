@@ -62,7 +62,6 @@ def run_v2_pipeline(args, config, user_input_kind):
         token = v2_config.get("next_action_token")
         if not token:
             print("Error: 'next_action_token' is not configured in config.yaml under 'v2:'.")
-            print("Run 'python scripts/get_token.py' to generate and inject it automatically.")
             return None
 
         print(f"captured next action token {token}")
