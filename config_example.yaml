@@ -1,11 +1,18 @@
-scrape: # Do not change these
-  url: "https://documents.gov.lk/view/extra-gazettes/egz.html"
+scrape: # Shared scrape configuration
+  url: "https://documents.gov.lk/web/extra_gazettes"
+
+v2: # V2 crawler specific configs
+  cdn_proxy_url: "https://documents.gov.lk/api/content-file-proxy?file="
+  api_endpoint: "http://gvp-api:4500/website-data/extra-gazette/get-all"
+  next_action_token: "7f679bcdf1c679caa0f2356b97387098c39c41312a" #service next action header in the client side (extra_gazettes API call)
+  languages:
+    - "ENGLISH"
 
 output: # Do not change these
-  metadata_dir: "metadata"
-  years_json: "metadata/years.json"
-  doc_metadata_json: "metadata/doc_metadata.json"
-  download_metadata_json: "metadata/download_metadata.json"
+  metadata_dir: "meta_data"
+  years_json: "meta_data/years.json"
+  doc_metadata_json: "meta_data/doc_metadata.json"
+  download_metadata_json: "meta_data/download_metadata.json"
   log_record_dir: "records"
   log_success: "successfully_archived.csv"
   log_failure: "failed_to_archive.csv"

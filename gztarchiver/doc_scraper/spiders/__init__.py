@@ -1,6 +1,6 @@
-from .years_spider import YearsSpider
-from .doc_metadata_spider import DocMetadataSpider
-from .doc_download_spider import PDFDownloaderSpider
+from gztarchiver.doc_scraper.v1.spiders.years_spider import YearsSpider
+from gztarchiver.doc_scraper.v1.spiders.doc_metadata_spider import DocMetadataSpider
+from gztarchiver.doc_scraper.common.spiders.doc_download_spider import PDFDownloaderSpider
 
 __all__ = [
     "YearsSpider",

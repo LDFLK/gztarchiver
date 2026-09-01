@@ -1,3 +1,4 @@
+from twisted.python.failure import Failure
 import asyncio
 import sys
 if sys.platform == 'win32':
@@ -7,8 +8,8 @@ asyncioreactor.install()
 from .doc_scraper.cmd import parse_args, identify_input_kind
 from pathlib import Path
 import yaml
-from twisted.internet import reactor
-from .doc_scraper.crawler import run_crawlers_sequentially
+from twisted.internet import reactor, defer
+from .doc_scraper.crawler import get_crawler_pipeline
 from pyfiglet import figlet_format
 from termcolor import colored
     
@@ -40,10 +41,38 @@ def main():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    # Run crawlers sequentially
-    run_crawlers_sequentially(args, config, user_input_kind)
+    # Retrieve and execute selected pipeline
+    try:
+        pipeline, version = get_crawler_pipeline(args.crawler_version)
+        print(f"Using Crawler Version: {version.upper()}")
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    
+    pipeline_failed = False
+
+    def _execute():
+        nonlocal pipeline_failed
+        d = defer.maybeDeferred(pipeline, args, config, user_input_kind)
+
+        def _cleanup(result):
+            nonlocal pipeline_failed
+            if isinstance(result, Failure):
+                pipeline_failed = True
+                print(f"Pipeline failed: {result.getErrorMessage()}")
+            
+            if reactor.running:
+                reactor.stop()
+
+            return result
+
+        d.addBoth(_cleanup)
+
+    reactor.callWhenRunning(_execute)
     reactor.run()
 
+    if pipeline_failed:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

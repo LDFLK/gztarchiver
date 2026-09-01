@@ -20,9 +20,7 @@ name = "gztarchiver"
 version = "0.1.0"
 description = "Sri Lankan Gazette Archiver"
 requires-python = ">=3.7"
-authors = [
-    { name="Yasandu Imanjith", email="yasanduyaka2005@gmail.com" }
-]
+
 dependencies = [
     "PyYAML>=6.0.0",     
     "scrapy>=2.13.0",               
@@ -31,7 +29,8 @@ dependencies = [
     "pyfiglet>=0.8",  
     "termcolor>=2.3.0",
     "PyMuPDF>=1.26.3",
-    "packaging>=21,<25"               
+    "packaging>=21,<25",
+    "pydantic>=2.0",
 ] 
 
 [project.optional-dependencies]

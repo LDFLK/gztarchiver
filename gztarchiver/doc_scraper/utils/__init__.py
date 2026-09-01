@@ -1,7 +1,7 @@
 from .year_data_utils import load_years_metadata, get_year_link
 from .hide_logs_utils import hide_logs
 from .doc_metadata_utils import filter_doc_metadata, load_doc_metadata_file
-from .archive_folder_utils import create_folder_structure
+from .archive_folder_utils import create_folder_structure, build_download_metadata_v2
 from .db_utils import save_metadata_to_filesystem
 
 __all__ = [
@@ -12,6 +12,7 @@ __all__ = [
     "filter_doc_metadata",
     "load_doc_metadata_file",
     "create_folder_structure",
+    "build_download_metadata_v2",
     "filter_pdf_only",
     "save_upload_results",
     "save_metadata_to_filesystem",
