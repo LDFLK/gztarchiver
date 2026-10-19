@@ -224,8 +224,7 @@ def run_v2_pipeline(args, config, user_input_kind):
 
         if raw_download_metadata is None:
             raise RuntimeError(
-                f"Updated download metadata not found at {output_path_download}; "
-                "refusing to continue with pre-download metadata."
+                f"Updated download metadata not found at {output_path_download};"
             )
 
         updated_download_metadata = [DownloadMetadata(**item) for item in raw_download_metadata]
