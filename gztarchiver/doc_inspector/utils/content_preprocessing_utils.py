@@ -219,7 +219,7 @@ def extract_text_from_pdf(all_download_metadata: List[DownloadMetadata], chunk_s
 
     # Summary
     print("EXTRACTION SUMMARY")
-    total_docs = len([ item for item in all_download_metadata if item.get("availability") != "Unavailable"])
+    total_docs = len([ item for item in all_download_metadata if item.get("availability") not in ("Unavailable", "DOWNLOAD_FAILED")])
     successful_extractions = len([doc for doc in extracted_texts.values() if doc["status"] == "success"])
 
     print(f"Total documents processed: {total_docs}")
