@@ -171,6 +171,7 @@ class PDFDownloaderSpider(scrapy.Spider):
         except Exception as e:
             self.log_status(item, self.config["output"]["log_failure"])
             self.logger.error(f"❌ Failed to save {file_path}: {e}")
+            item["availability"] = "DOWNLOAD_FAILED"
             print(f"❌ Failed to save {file_path}: {e}")
     
     def handle_failure(self, failure):
