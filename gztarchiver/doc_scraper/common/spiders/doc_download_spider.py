@@ -274,7 +274,7 @@ class PDFDownloaderSpider(scrapy.Spider):
             base_log_dir.mkdir(parents=True, exist_ok=True)
             log_file = base_log_dir / f"{status}"
 
-            if item.get('availability') in ('NO_URL', 'Unavailable'):
+            if status == self.config["output"]["log_unavailable"]:
                 file_location = item["file_path"].parent
             else:
                 file_location = item["file_path"]

@@ -107,7 +107,7 @@ def build_download_metadata_v1(archive_location, filtered_doc_metadata):
         if availability != "Available" or url == "N/A":
             file_name = f"{lang_suffix}.txt"
             file_path = folder_path / file_name 
-            availability = "NO_URL"
+            availability = "Unavailable"
         else:      
             file_name = f"{doc_id}_{lang_suffix}.pdf"
             file_path = folder_path / file_name       
