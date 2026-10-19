@@ -75,13 +75,7 @@ def extract_text_from_pdf(all_download_metadata: List[DownloadMetadata], chunk_s
         download_url = doc_info["download_url"]
         description = doc_info["des"]
         
-        if availability == 'Unavailable' or file_name == 'unavailable.json':
-            # extracted_texts[doc_id] = {
-            #     "status": "unavailable",
-            #     "date": doc_date,
-            #     "text": "",
-            #     "error": "Document unavailable"
-            # }
+        if availability in ('Unavailable', 'DOWNLOAD_FAILED') or file_name == 'unavailable.json':
             continue
 
         print(f"\n")
