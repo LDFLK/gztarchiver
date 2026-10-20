@@ -1,6 +1,5 @@
 import os
 import shutil
-from pathlib import Path
 from gztarchiver.doc_inspector.utils import (
     extract_text_from_pdf,
     prepare_for_llm_processing,
@@ -35,15 +34,16 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
             divert_url = config["credentials"]["divert_url_deep_seek"]
             
             # Classification process of the pdfs'
-            classified_metadata, classified_metadata_dic = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
+            classified_metadata_success, classified_metadata_dic_success, classified_metadata_failed, classified_metadata_dic_failed = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
+            classified_metadata_dic = {**classified_metadata_dic_success, **classified_metadata_dic_failed}
             print(f"{'-' * 80}")
            
             # TODO : data is not reliable, issue when saving, rewrite the whole file again in the next run   
             # Saving the classified metadata of the pdfs'
-            save_classified_doc_metadata(classified_metadata, archive_location, args.year, config)
+            save_classified_doc_metadata(classified_metadata_success, classified_metadata_failed, archive_location, args.year, config)
         else:
             print("\nDocument classification is disabled in configuration. Skipping LLM processing.\n")
-      
+
         # Processing metadata to save
         save_metadata_to_filesystem(total_documents_to_process, classified_metadata_dic, config)
         

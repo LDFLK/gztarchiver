@@ -75,7 +75,8 @@ Downloaded documents are organized as:
 |   |    ├── successfully_archived.csv
 |   |    ├── failed_to_archive.csv
 |   |    ├── document_unavailable.csv
-|   |    ├── document_classification.csv
+|   |    ├── document_classification_success.csv
+|   |    ├── document_classification_failed.csv
 |   └── ...
 └── ...
 ```
@@ -86,7 +87,8 @@ For each year, the following log files are created:
 - `{year}/records/successfully_archived.csv` - Successfully downloaded files
 - `{year}/records/failed_to_archive.csv` - Failed downloads with retry information
 - `{year}/records/document_unavailable.csv` - Unavailable logs
-- `{year}/records/document_classification.csv` - Document Classified metadata
+- `{year}/records/document_classification_success.csv` - Successfully classified document metadata
+- `{year}/records/document_classification_failed.csv` - Documents that failed classification (retried on each run)
 
 ## Error Messages
 
