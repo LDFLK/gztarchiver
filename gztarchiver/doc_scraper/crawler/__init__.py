@@ -1,5 +1,7 @@
-from .run_crawlers import run_crawlers_sequentially
+from .dispatcher import get_crawler_pipeline, DEFAULT_VERSION, PIPELINES
 
 __all__ = [
-    "run_crawlers_sequentially"
+    "get_crawler_pipeline",
+    "DEFAULT_VERSION",
+    "PIPELINES"
 ]

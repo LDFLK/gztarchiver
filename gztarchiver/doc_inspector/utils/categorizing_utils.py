@@ -1,5 +1,7 @@
 import requests
 from gztarchiver.doc_inspector.LLM import GAZETTE_CLASSIFICATION_PROMPT
+from gztarchiver.models import DownloadMetadata
+from gztarchiver.doc_scraper.utils.file_utils import atomic_write_csv
 from pathlib import Path
 import csv
 from datetime import datetime, timezone
@@ -123,35 +125,25 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url):
         
 def process_failed_documents(archive_location, year, config):
     error_records = []
-    kept_rows = []
-    
+
     year_folder = Path(archive_location).expanduser() / str(year) / config["output"]["log_record_dir"]
     year_folder.mkdir(parents=True, exist_ok=True)
-    
-    csv_file_path = year_folder / config["output"]["log_classification"]
-    
+
+    csv_file_path = year_folder / config["output"]["log_classification_failed"]
+
     if not csv_file_path.exists():
         print(f"Skipping: {csv_file_path} does not exist yet.")
         return []
-    
-    
-    # 1. Open and read the CSV to find 'Error' records
+
+    # 1. Read all records from the failed classification log.
+    # The file is not cleared here; save_classified_doc_metadata moves each
+    # record to the success log once it is classified successfully.
     with open(csv_file_path, mode='r', newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames
-        
         for row in reader:
-            # Check if the Gazette Type column matches 'Error'
-            if row.get('Gazette Type') == 'Error' or row.get('Gazette Type') == 'NOT CATEGORISED':
+            if row.get('Document ID'):
                 error_records.append(row)
-            else:
-                kept_rows.append(row)
-                
-    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(kept_rows)
-                
+
     # 2. Process the identified records
     results = []
     if not error_records:
@@ -159,43 +151,69 @@ def process_failed_documents(archive_location, year, config):
         return results
          
     for record in error_records:
-        file_path_value = record.get('Document Path')
-        document_object = {
-            "doc_id": record.get('Document ID'),
-            "date": record.get('Document Date'),
-            "file_path": record.get('Document Path'),
-            "file_name": Path(file_path_value).name if file_path_value else None,
-            "availability": record.get('Document Availability'),
-            "download_url": record.get('Download URL'),
-            "des": record.get('Document Description')
-        }
+        file_path_value = record.get('Document Path') or ""
+        document_object = DownloadMetadata(
+            doc_id=record.get('Document ID') or "",
+            date=record.get('Document Date') or "",
+            file_path=Path(file_path_value),
+            file_name=Path(file_path_value).name,
+            availability=record.get('Document Availability') or "",
+            download_url=record.get('Download URL') or "",
+            des=record.get('Document Description'),
+        )
         results.append(document_object)
         
     return results
         
-def save_classified_doc_metadata(metadata_list, archive_location, year, config):
+def save_classified_doc_metadata(metadata_list_success, metadata_list_failed, archive_location, year, config):
     
     year_folder = Path(archive_location).expanduser() / str(year) / config["output"]["log_record_dir"]
     year_folder.mkdir(parents=True, exist_ok=True)
     
     # Set the CSV file path
-    csv_file_path = year_folder / config["output"]["log_classification"]
-    file_exists = csv_file_path.exists()
-    
-    # Write or append to the CSV file
-    with open(csv_file_path, mode='a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["Document ID", "Document Date", "Gazette Type", "Categorisation", "Document Path", "Document Availability", "Download URL", "Document Description"])
-        for row in metadata_list:
-            writer.writerow(row)
+    csv_file_path_success = year_folder / config["output"]["log_classification_success"]
+    csv_file_path_failed = year_folder / config["output"]["log_classification_failed"]
+    header = ["Document ID", "Document Date", "Classification Type", "Categorisation", "Document Path", "Document Availability", "Download URL", "Document Description"]
 
-    print(f"[✓] Metadata saved to {csv_file_path}")  
+    # Load existing rows keyed by Document ID
+    success_rows_by_doc_id = _read_rows_by_doc_id(csv_file_path_success)
+    failed_rows_by_doc_id = _read_rows_by_doc_id(csv_file_path_failed)
+
+    # Upsert: update the row if the Document ID exists, otherwise add it.
+    # Also remove it from the other log so a document lives in only one file.
+    for row in metadata_list_success:
+        success_rows_by_doc_id[str(row[0])] = row
+        failed_rows_by_doc_id.pop(str(row[0]), None)
+
+    for row in metadata_list_failed:
+        failed_rows_by_doc_id[str(row[0])] = row
+        success_rows_by_doc_id.pop(str(row[0]), None)
+
+    # Rewrite the CSV files
+    atomic_write_csv(csv_file_path_success, header, success_rows_by_doc_id.values())
+    atomic_write_csv(csv_file_path_failed, header, failed_rows_by_doc_id.values())
+
+    print(f"[✓] Metadata saved to {csv_file_path_success}")
+    print(f"[✓] Metadata saved to {csv_file_path_failed}")
     return
 
+def _read_rows_by_doc_id(csv_file_path):
+    """Read a classification log CSV and return its rows keyed by Document ID."""
+    rows_by_doc_id = {}
+    if csv_file_path.exists():
+        with open(csv_file_path, mode='r', newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader, None)  # skip header
+            for row in reader:
+                if row:
+                    rows_by_doc_id[row[0]] = row
+    return rows_by_doc_id
+
 def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
-    classified_metadata = []
-    classified_metadata_dic = {}
+    classified_metadata_success = []
+    classified_metadata_dic_success = {}
+    classified_metadata_failed = []
+    classified_metadata_dic_failed = {}
         
     for doc_id in llm_ready_texts:
         doc_text = llm_ready_texts[doc_id]["text"]
@@ -211,15 +229,15 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
         print(f"Document download URL: {doc_download_url}")
         print(f"Description: {description}")
         res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url)
+        doc_type = res['type']
+        doc_type_reason = res['categorisation']
         if res["success"]:
-            doc_type = res['type']
-            doc_type_reason = res['categorisation']
             print(f"Gazette type: {res['type']}")
             print(f"Categorisation: {res['categorisation']}")
+            classified_metadata, classified_metadata_dic = classified_metadata_success, classified_metadata_dic_success
         else:
-            doc_type = res['type']
-            doc_type_reason = res['categorisation']
             print(f"Error: {res['categorisation']}")
+            classified_metadata, classified_metadata_dic = classified_metadata_failed, classified_metadata_dic_failed
         # Append metadata for later saving
         classified_metadata.append((doc_id, doc_date, doc_type, doc_type_reason, doc_file_path, doc_availability, doc_download_url, description))
         classified_metadata_dic[doc_id] = {
@@ -231,6 +249,6 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
             'download_url': doc_download_url,
             'des': description
         }
-        print("\n" + "="*80 + "\n") 
+        print("\n" + "="*80 + "\n")
     
-    return classified_metadata, classified_metadata_dic
+    return classified_metadata_success, classified_metadata_dic_success, classified_metadata_failed, classified_metadata_dic_failed

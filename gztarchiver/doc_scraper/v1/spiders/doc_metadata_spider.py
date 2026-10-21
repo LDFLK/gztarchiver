@@ -1,14 +1,14 @@
 import scrapy
 from urllib.parse import urljoin
 import os
-import json
+from gztarchiver.doc_scraper.utils.file_utils import atomic_write_json
 
 class DocMetadataSpider(scrapy.Spider):
     name = "doc_metadata_spider"
 
-    def __init__(self, url=None, lang=None,output_path=None, **kwargs):
+    def __init__(self, url=None, lang=None, output_path=None, **kwargs):
         self.start_urls = [url]
-        self.lang = lang.lower()
+        self.lang = lang.lower() if lang else "en"
         self.output_path = output_path
         super().__init__(**kwargs)
 
@@ -51,11 +51,7 @@ class DocMetadataSpider(scrapy.Spider):
             }
             
             all_table_metadata.append(table_metadata)
-        # TODO: This function should consider
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-        with open(self.output_path, "w") as f:
-            json.dump(all_table_metadata, f, indent=2)
-        print("Data saved to doc_metadata.json") 
-
-
         
+        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+        atomic_write_json(self.output_path, all_table_metadata)
+        print("Data saved to doc_metadata.json")

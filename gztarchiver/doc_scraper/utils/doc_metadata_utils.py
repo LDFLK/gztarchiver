@@ -1,11 +1,11 @@
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional
 import os
 
-def load_doc_metadata_file(json_path: str) -> List[Dict[str, str]]:
+def load_doc_metadata_file(json_path: str) -> Optional[List[Dict[str, str]]]:
     if not os.path.exists(json_path):
         return None
-    
+
     with open(json_path, "r", encoding="utf-8") as f:
         return json.load(f)
 

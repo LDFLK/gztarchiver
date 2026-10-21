@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 import unicodedata
 import fitz 
+from gztarchiver.models import DownloadMetadata
 
 def clean_extracted_text(text: str) -> str:
     """
@@ -54,7 +55,7 @@ def clean_extracted_text(text: str) -> str:
     
     return text.strip()
 
-def extract_text_from_pdf(all_download_metadata: List[Dict[str, Any]], chunk_size: int = 20) -> Dict[str, str]:
+def extract_text_from_pdf(all_download_metadata: List[DownloadMetadata], chunk_size: int = 20) -> Dict[str, Dict[str, Any]]:
     """
     Extract and clean text from PDF documents in chunks to avoid freezing on large files.
     Uses PyMuPDF for faster and more reliable extraction.
@@ -74,13 +75,7 @@ def extract_text_from_pdf(all_download_metadata: List[Dict[str, Any]], chunk_siz
         download_url = doc_info["download_url"]
         description = doc_info["des"]
         
-        if availability == 'Unavailable' or file_name == 'unavailable.json':
-            # extracted_texts[doc_id] = {
-            #     "status": "unavailable",
-            #     "date": doc_date,
-            #     "text": "",
-            #     "error": "Document unavailable"
-            # }
+        if availability in ('Unavailable', 'DOWNLOAD_FAILED') or file_name == 'unavailable.json':
             continue
 
         print(f"\n")
@@ -218,7 +213,7 @@ def extract_text_from_pdf(all_download_metadata: List[Dict[str, Any]], chunk_siz
 
     # Summary
     print("EXTRACTION SUMMARY")
-    total_docs = len([ item for item in all_download_metadata if item.get("availability") != "Unavailable"])
+    total_docs = len([ item for item in all_download_metadata if item.get("availability") not in ("Unavailable", "DOWNLOAD_FAILED")])
     successful_extractions = len([doc for doc in extracted_texts.values() if doc["status"] == "success"])
 
     print(f"Total documents processed: {total_docs}")
