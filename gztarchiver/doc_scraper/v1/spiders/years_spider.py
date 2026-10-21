@@ -1,7 +1,7 @@
 import scrapy
 import os
-import json
 from urllib.parse import urljoin
+from gztarchiver.doc_scraper.utils.file_utils import atomic_write_json
 
 class YearsSpider(scrapy.Spider):
     name = "years"
@@ -20,7 +20,6 @@ class YearsSpider(scrapy.Spider):
             data.append({"year": year, "link": full_url})
 
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-        with open(self.output_path, "w") as f:
-            json.dump(data, f, indent=2)
+        atomic_write_json(self.output_path, data)
 
         self.log(f"Saved {len(data)} year links to {self.output_path}")

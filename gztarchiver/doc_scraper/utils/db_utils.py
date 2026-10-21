@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from pathlib import Path
-import json
 from typing import List
 from gztarchiver.models import DownloadMetadata
+from .file_utils import atomic_write_json
 
 def save_metadata_to_filesystem(all_download_metadata: List[DownloadMetadata], classified_metadata_dic, config):
     merged_output = []
@@ -35,8 +35,7 @@ def save_metadata_to_filesystem(all_download_metadata: List[DownloadMetadata], c
         
         document_metadata_object_path = parent_folder_of_document / f"{str(doc_id)}_metadata.json"
         
-        with open(document_metadata_object_path, "w") as f:
-            json.dump(document_object, f, indent=2)
+        atomic_write_json(document_metadata_object_path, document_object)
             
         print(f"Document metadata saved at : {document_metadata_object_path}")
                     

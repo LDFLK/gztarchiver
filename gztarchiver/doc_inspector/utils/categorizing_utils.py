@@ -1,6 +1,7 @@
 import requests
 from gztarchiver.doc_inspector.LLM import GAZETTE_CLASSIFICATION_PROMPT
 from gztarchiver.models import DownloadMetadata
+from gztarchiver.doc_scraper.utils.file_utils import atomic_write_csv
 from pathlib import Path
 import csv
 from datetime import datetime, timezone
@@ -189,8 +190,8 @@ def save_classified_doc_metadata(metadata_list_success, metadata_list_failed, ar
         success_rows_by_doc_id.pop(str(row[0]), None)
 
     # Rewrite the CSV files
-    _write_rows(csv_file_path_success, header, success_rows_by_doc_id.values())
-    _write_rows(csv_file_path_failed, header, failed_rows_by_doc_id.values())
+    atomic_write_csv(csv_file_path_success, header, success_rows_by_doc_id.values())
+    atomic_write_csv(csv_file_path_failed, header, failed_rows_by_doc_id.values())
 
     print(f"[✓] Metadata saved to {csv_file_path_success}")
     print(f"[✓] Metadata saved to {csv_file_path_failed}")
@@ -207,13 +208,6 @@ def _read_rows_by_doc_id(csv_file_path):
                 if row:
                     rows_by_doc_id[row[0]] = row
     return rows_by_doc_id
-
-def _write_rows(csv_file_path, header, rows):
-    """Rewrite a classification log CSV with the given header and rows."""
-    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(rows)
 
 def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
     classified_metadata_success = []

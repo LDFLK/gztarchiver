@@ -1,7 +1,7 @@
 import scrapy
 from pathlib import Path
 import csv
-import json
+from gztarchiver.doc_scraper.utils.file_utils import atomic_write_csv, atomic_write_json
 
 class PDFDownloaderSpider(scrapy.Spider):
     name = "pdf_downloader"
@@ -207,8 +207,7 @@ class PDFDownloaderSpider(scrapy.Spider):
                 
             output_file = Path(self.output_path)
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, "w", encoding="utf-8") as jsonfile:
-                json.dump(serializable_metadata, jsonfile, indent=4)
+            atomic_write_json(output_file, serializable_metadata, indent=4)
             self.logger.info(f"📝 Updated metadata saved to: {self.output_path}")
             print(f"    📝 Updated metadata saved to: {self.output_path}")
         except Exception as e:
@@ -230,15 +229,12 @@ class PDFDownloaderSpider(scrapy.Spider):
                         if r and len(r) > 0:
                             rows[r[0]] = r
             except Exception as e:
-                self.logger.warning(f"Error reading {log_file} for upsert: {e}")
+                # Abort instead of overwriting the log with only the new row
+                raise RuntimeError(f"Error reading {log_file} for upsert: {e}") from e
 
         rows[doc_id] = row_data
 
-        with open(log_file, "w", newline='', encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(header)
-            for r in rows.values():
-                writer.writerow(r)
+        atomic_write_csv(log_file, header, rows.values())
 
     def _remove_csv_row(self, log_file: Path, doc_id: str):
         """Remove a row with doc_id from a CSV log file if present."""
@@ -260,11 +256,7 @@ class PDFDownloaderSpider(scrapy.Spider):
                         rows.append(r)
 
             if found:
-                with open(log_file, "w", newline='', encoding="utf-8") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(header)
-                    for r in rows:
-                        writer.writerow(r)
+                atomic_write_csv(log_file, header, rows)
         except Exception as e:
             self.logger.warning(f"Error removing {doc_id} from {log_file}: {e}")
 

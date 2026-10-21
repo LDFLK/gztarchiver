@@ -1,7 +1,7 @@
 import scrapy
 from urllib.parse import urljoin
 import os
-import json
+from gztarchiver.doc_scraper.utils.file_utils import atomic_write_json
 
 class DocMetadataSpider(scrapy.Spider):
     name = "doc_metadata_spider"
@@ -53,6 +53,5 @@ class DocMetadataSpider(scrapy.Spider):
             all_table_metadata.append(table_metadata)
         
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-        with open(self.output_path, "w") as f:
-            json.dump(all_table_metadata, f, indent=2)
+        atomic_write_json(self.output_path, all_table_metadata)
         print("Data saved to doc_metadata.json")
