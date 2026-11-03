@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import calendar
+import datetime
 import json
 import logging
 import requests
@@ -60,14 +62,13 @@ def run_v2_pipeline(args, config, user_input_kind):
             return f"{year}-01-01", f"{year}-12-31"
         elif user_input_kind == "year-month-lang":
             month = int(args.month)
-            # last day of month via rolling to day 0 of next month
-            import calendar
+            if not 1 <= month <= 12:
+                raise ValueError(f"Invalid --month {month}: must be 1–12")
             last_day = calendar.monthrange(year, month)[1]
             return f"{year}-{month:02d}-01", f"{year}-{month:02d}-{last_day:02d}"
         else:  # year-month-day-lang
             day = int(args.day)
             month = int(args.month)
-            import datetime
             try:
                 datetime.date(year, month, day)
             except ValueError as e:
