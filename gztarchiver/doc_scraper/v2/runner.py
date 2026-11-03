@@ -67,6 +67,11 @@ def run_v2_pipeline(args, config, user_input_kind):
         else:  # year-month-day-lang
             day = int(args.day)
             month = int(args.month)
+            import datetime
+            try:
+                datetime.date(year, month, day)
+            except ValueError as e:
+                raise ValueError(f"Invalid date --year {year} --month {month} --day {day}: {e}") from e
             return f"{year}-{month:02d}-{day:02d}", f"{year}-{month:02d}-{day:02d}"
 
     def _fetch_all_matching() -> list:
