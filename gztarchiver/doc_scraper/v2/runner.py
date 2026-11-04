@@ -82,7 +82,7 @@ def run_v2_pipeline(args, config, user_input_kind):
         so no client-side filtering or early-stop is needed.
 
         Returns:
-            All matching GazetteEntry objects across all pages fetched.
+            All matching gazette entries across all pages fetched.
         """
         headers = {
             "Accept": "text/x-component",
