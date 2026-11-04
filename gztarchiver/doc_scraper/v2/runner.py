@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import calendar
+import datetime
 import json
 import logging
 import requests
-from datetime import date as date_type
 from pathlib import Path
 
 from scrapy.crawler import CrawlerRunner
@@ -13,11 +14,10 @@ from gztarchiver.doc_scraper.utils import (
     build_download_metadata_v2,
     hide_logs,
     load_doc_metadata_file,
-    dynamic_page_size_based_on_date
 )
 from gztarchiver.doc_scraper.common.post_processing import post_crawl_processing
 from gztarchiver.doc_scraper.common.spiders import PDFDownloaderSpider
-from gztarchiver.models import DownloadMetadata, GazetteApiResponse, GazetteEntry
+from gztarchiver.models import DownloadMetadata, GazetteApiResponse
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,11 @@ def run_v2_pipeline(args, config, user_input_kind):
 
     Steps:
       1. Resolve the Next.js `next-action` token from config.yaml.
-      2. Smart-paginate the API with early-stop once past the target date range.
+      2. Paginate the API using server-side date filtering via the `forwarded` field.
       3. Validate the response with Pydantic.
-      4. Filter entries matching --year / --month / --day / --lang.
-      5. Build download metadata (folder structure + file paths).
-      6. Download PDFs via PDFDownloaderSpider (skips already-archived docs).
-      7. Run post-processing if classification is enabled in config.yaml.
+      4. Build download metadata (folder structure + file paths).
+      5. Download PDFs via PDFDownloaderSpider (skips already-archived docs).
+      6. Run post-processing if classification is enabled in config.yaml.
 
     Args:
         args: CLI arguments (args.year, args.month, args.day, args.lang).
@@ -56,36 +55,43 @@ def run_v2_pipeline(args, config, user_input_kind):
 
     archive_location = Path(config["archive"]["archive_location"])
 
-    def _build_stop_date(user_input_kind: str) -> date_type:
-        """Return the earliest date we still care about.
-        Once a page's last entry is strictly before this date, stop."""
+    def _build_date_range(user_input_kind: str) -> tuple[str, str]:
+        """Build dateFrom and dateTo strings for the API forwarded filter."""
         year = int(args.year)
         if user_input_kind == "year-lang":
-            return date_type(year, 1, 1)
+            return f"{year}-01-01", f"{year}-12-31"
         elif user_input_kind == "year-month-lang":
-            return date_type(year, int(args.month), 1)
+            month = int(args.month)
+            if not 1 <= month <= 12:
+                raise ValueError(f"Invalid --month {month}: must be 1–12")
+            last_day = calendar.monthrange(year, month)[1]
+            return f"{year}-{month:02d}-01", f"{year}-{month:02d}-{last_day:02d}"
         else:  # year-month-day-lang
-            return date_type(year, int(args.month), int(args.day))
+            day = int(args.day)
+            month = int(args.month)
+            try:
+                datetime.date(year, month, day)
+            except ValueError as e:
+                raise ValueError(f"Invalid date --year {year} --month {month} --day {day}: {e}") from e
+            return f"{year}-{month:02d}-{day:02d}", f"{year}-{month:02d}-{day:02d}"
 
-    def _fetch_all_matching() -> list[GazetteEntry]:
+    def _fetch_all_matching() -> list:
         """
-        Paginate through the API, collecting entries that fall within the
-        requested date range. Stops as soon as the page's last entry is
-        older than the earliest date we need.
-
-        Args:
-            page_size: Number of entries per API request (default 1500).
+        Paginate through the API using server-side date filtering.
+        The API filters entries via the forwarded dateFrom/dateTo fields,
+        so no client-side filtering or early-stop is needed.
 
         Returns:
-            All matching GazetteEntry objects across all pages fetched.
+            All matching gazette entries across all pages fetched.
         """
         headers = {
             "Accept": "text/x-component",
             "Content-Type": "text/plain;charset=UTF-8",
-            "next-action": token}
-        stop_date = _build_stop_date(user_input_kind)
-        page_size = dynamic_page_size_based_on_date(stop_date)
-        collected: list[GazetteEntry] = []
+            "next-action": token,
+        }
+        date_from, date_to = _build_date_range(user_input_kind)
+        page_size = 100
+        collected = []
         current_page = 1
 
         while True:
@@ -95,7 +101,10 @@ def run_v2_pipeline(args, config, user_input_kind):
                 "limit": page_size,
                 "q": "",
                 "search": "",
-                "forwarded": {},
+                "forwarded": {
+                    "dateFrom": date_from,
+                    "dateTo": date_to,
+                },
             }]
 
             response = requests.post(
@@ -138,38 +147,17 @@ def run_v2_pipeline(args, config, user_input_kind):
                 print(f"  Page {current_page}: empty — stopping.")
                 break
 
-            # Filter entries on this page that match the target date range
-            for entry in entries:
-                entry_date = entry.date.date()
-                if _matches_filter(entry_date, user_input_kind):
-                    collected.append(entry)
+            collected.extend(entries)
 
-            # Early-stop: the last entry on this page is older
-            last_entry_date = entries[-1].date.date()
             total_pages = page_response.pagination.totalPages
-            print(
-                f"  Page {current_page}/{total_pages}: "
-                f"last entry date = {last_entry_date}, "
-                f"stop date = {stop_date}, "
-                f"matches so far = {len(collected)}"
-            )
+            print(f"  Page {current_page}/{total_pages}: {len(entries)} entries, {len(collected)} total so far.")
 
-            if last_entry_date < stop_date or current_page >= total_pages:
+            if current_page >= total_pages:
                 break
 
             current_page += 1
 
         return collected
-
-    def _matches_filter(entry_date: date_type, user_input_kind: str) -> bool:
-        """Return True if entry_date falls within the user's requested range."""
-        year = int(args.year)
-        if user_input_kind == "year-lang":
-            return entry_date.year == year
-        elif user_input_kind == "year-month-lang":
-            return entry_date.year == year and entry_date.month == int(args.month)
-        else:  # year-month-day-lang
-            return entry_date == date_type(year, int(args.month), int(args.day))
 
     try:
         # Step 1 — Retrieve the Next.js server-action token from configuration
