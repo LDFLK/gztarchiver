@@ -1,12 +1,64 @@
+import time
 import requests
 from gztarchiver.doc_inspector.LLM import GAZETTE_CLASSIFICATION_PROMPT
 from gztarchiver.models import DownloadMetadata
 from gztarchiver.doc_scraper.utils.file_utils import atomic_write_csv
+from email.utils import parsedate_to_datetime
+from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 from pathlib import Path
 import csv
 from datetime import datetime, timezone
 
-def classify_gazette(content, doc_id, divert_api_key, divert_url):
+DEFAULT_REQUESTS_PER_MINUTE = 20
+DEFAULT_MAX_RETRIES = 5
+REQUEST_TIMEOUT_SECONDS = 30
+RETRY_AFTER_CAP_SECONDS = 300
+_BACKOFF = wait_exponential_jitter(initial=1, max=60, jitter=1)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Retry transient transport failures and HTTP 429/5xx responses."""
+    if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+        return True
+    return (
+        isinstance(exc, requests.HTTPError)
+        and exc.response is not None
+        and (exc.response.status_code == 429 or 500 <= exc.response.status_code < 600)
+    )
+
+
+def _retry_wait(state: RetryCallState) -> float:
+    """Respect request pacing and server delays without unbounded waits."""
+    delay_seconds = state.args[3] if len(state.args) > 3 else 0.0
+    response = getattr(state.outcome.exception(), "response", None)
+    value = response.headers.get("Retry-After") if response is not None else None
+    if not value:
+        return max(delay_seconds, _BACKOFF(state))
+    value = value.strip()
+    if value.isascii() and value.isdecimal():
+        seconds = float(value)
+    else:
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return max(delay_seconds, _BACKOFF(state))
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+    if seconds > RETRY_AFTER_CAP_SECONDS:
+        raise state.outcome.exception()
+    return max(delay_seconds, seconds, 0.0)
+
+
+@retry(retry=retry_if_exception(_is_retryable), wait=_retry_wait,
+       stop=stop_after_attempt(DEFAULT_MAX_RETRIES + 1), reraise=True)
+def _post_classification(url: str, headers: dict, payload: dict, delay_seconds: float = 0.0) -> requests.Response:
+    response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response
+
+
+def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DEFAULT_MAX_RETRIES, delay_seconds=0.0):
     """
     Classifies a gazette document using DeepSeek LLM API
     
@@ -45,9 +97,9 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url):
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     
     try:
-        # Make the API request
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
+        response = _post_classification.retry_with(
+            stop=stop_after_attempt(max_retries + 1),
+        )(url, headers, payload, delay_seconds)
         
         # Parse the response
         result = response.json()
@@ -209,13 +261,17 @@ def _read_rows_by_doc_id(csv_file_path):
                     rows_by_doc_id[row[0]] = row
     return rows_by_doc_id
 
-def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
+def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url, requests_per_minute=DEFAULT_REQUESTS_PER_MINUTE, max_retries=DEFAULT_MAX_RETRIES):
+    """Classify documents with pacing between documents and retry attempts."""
     classified_metadata_success = []
     classified_metadata_dic_success = {}
     classified_metadata_failed = []
     classified_metadata_dic_failed = {}
-        
-    for doc_id in llm_ready_texts:
+    delay_seconds = 60.0 / requests_per_minute if requests_per_minute > 0 else 0.0
+
+    for index, doc_id in enumerate(llm_ready_texts):
+        if index > 0 and delay_seconds:
+            time.sleep(delay_seconds)
         doc_text = llm_ready_texts[doc_id]["text"]
         doc_date = llm_ready_texts[doc_id]["date"]
         doc_file_path = llm_ready_texts[doc_id]["file_path"]
@@ -228,7 +284,7 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
         print(f"Document Availability: {doc_availability}")
         print(f"Document download URL: {doc_download_url}")
         print(f"Description: {description}")
-        res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url)
+        res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url, max_retries, delay_seconds)
         doc_type = res['type']
         doc_type_reason = res['categorisation']
         if res["success"]:

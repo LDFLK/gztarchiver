@@ -29,4 +29,6 @@ credentials: # Change on your preference
 
 classification: # Change on your preference
   enable: true # Set to false to skip LLM extraction & categorization
+  requests_per_minute: 20 # LLM call rate limit; 0 disables throttling
+  max_retries: 5 # Retries on 429/5xx/network errors before marking a document failed
 
