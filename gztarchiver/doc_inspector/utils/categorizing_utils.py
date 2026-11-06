@@ -29,19 +29,19 @@ def _is_retryable(exc: BaseException) -> bool:
 def _retry_wait(state: RetryCallState) -> float:
     response = getattr(state.outcome.exception(), "response", None)
     value = response.headers.get("Retry-After") if response is not None else None
-    if value:
-        try:
-            seconds = float(value)
-        except ValueError:
-            try:
-                retry_at = parsedate_to_datetime(value)
-                if retry_at.tzinfo is None:
-                    retry_at = retry_at.replace(tzinfo=timezone.utc)
-                seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
-            except (TypeError, ValueError):
-                return _BACKOFF(state)
-        return min(max(0.0, seconds), RETRY_AFTER_CAP_SECONDS)
-    return _BACKOFF(state)
+    if not value:
+        return _BACKOFF(state)
+    value = value.strip()
+    if value.isascii() and value.isdecimal():
+        return min(float(value), RETRY_AFTER_CAP_SECONDS)
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return _BACKOFF(state)
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=timezone.utc)
+    seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+    return min(max(0.0, seconds), RETRY_AFTER_CAP_SECONDS)
 
 
 @retry(retry=retry_if_exception(_is_retryable), wait=_retry_wait,
