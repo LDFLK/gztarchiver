@@ -1,12 +1,19 @@
+import time
 import requests
 from gztarchiver.doc_inspector.LLM import GAZETTE_CLASSIFICATION_PROMPT
 from gztarchiver.models import DownloadMetadata
 from gztarchiver.doc_scraper.utils.file_utils import atomic_write_csv
+from gztarchiver.doc_inspector.utils.llm_retry import (
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_REQUESTS_PER_MINUTE,
+    post_with_retry,
+    rate_limit_delay_seconds,
+)
 from pathlib import Path
 import csv
 from datetime import datetime, timezone
 
-def classify_gazette(content, doc_id, divert_api_key, divert_url):
+def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DEFAULT_MAX_RETRIES):
     """
     Classifies a gazette document using DeepSeek LLM API
     
@@ -45,9 +52,7 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url):
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     
     try:
-        # Make the API request
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
+        response = post_with_retry(url, headers, payload, max_retries)
         
         # Parse the response
         result = response.json()
@@ -209,13 +214,16 @@ def _read_rows_by_doc_id(csv_file_path):
                     rows_by_doc_id[row[0]] = row
     return rows_by_doc_id
 
-def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
+def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url, requests_per_minute=DEFAULT_REQUESTS_PER_MINUTE, max_retries=DEFAULT_MAX_RETRIES):
     classified_metadata_success = []
     classified_metadata_dic_success = {}
     classified_metadata_failed = []
     classified_metadata_dic_failed = {}
-        
-    for doc_id in llm_ready_texts:
+    delay_seconds = rate_limit_delay_seconds(requests_per_minute)
+
+    for index, doc_id in enumerate(llm_ready_texts):
+        if index > 0 and delay_seconds:
+            time.sleep(delay_seconds)
         doc_text = llm_ready_texts[doc_id]["text"]
         doc_date = llm_ready_texts[doc_id]["date"]
         doc_file_path = llm_ready_texts[doc_id]["file_path"]
@@ -228,7 +236,7 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url ):
         print(f"Document Availability: {doc_availability}")
         print(f"Document download URL: {doc_download_url}")
         print(f"Description: {description}")
-        res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url)
+        res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url, max_retries)
         doc_type = res['type']
         doc_type_reason = res['categorisation']
         if res["success"]:

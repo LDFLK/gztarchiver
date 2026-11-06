@@ -17,7 +17,8 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
         total_documents_to_process = all_download_metadata
 
         # Check if classification is enabled in config (defaults to True)
-        classification_enabled = config.get("classification", {}).get("enable", True)
+        classification_config = config.get("classification", {})
+        classification_enabled = classification_config.get("enable", True)
 
         if classification_enabled:
             # check for the existing classified metadata logs
@@ -34,7 +35,13 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
             divert_url = config["credentials"]["divert_url_deep_seek"]
             
             # Classification process of the pdfs'
-            classified_metadata_success, classified_metadata_dic_success, classified_metadata_failed, classified_metadata_dic_failed = prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url)
+            classified_metadata_success, classified_metadata_dic_success, classified_metadata_failed, classified_metadata_dic_failed = prepare_classified_metadata(
+                llm_ready_texts,
+                divert_api_key,
+                divert_url,
+                requests_per_minute=classification_config.get("requests_per_minute"),
+                max_retries=classification_config.get("max_retries"),
+            )
             classified_metadata_dic = {**classified_metadata_dic_success, **classified_metadata_dic_failed}
             print(f"{'-' * 80}")
            
