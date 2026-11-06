@@ -17,6 +17,7 @@ _BACKOFF = wait_exponential_jitter(initial=1, max=60, jitter=1)
 
 
 def _is_retryable(exc: BaseException) -> bool:
+    """Retry transient transport failures and HTTP 429/5xx responses."""
     if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
         return True
     return (
@@ -27,32 +28,37 @@ def _is_retryable(exc: BaseException) -> bool:
 
 
 def _retry_wait(state: RetryCallState) -> float:
+    """Respect request pacing and server delays without unbounded waits."""
+    delay_seconds = state.args[3] if len(state.args) > 3 else 0.0
     response = getattr(state.outcome.exception(), "response", None)
     value = response.headers.get("Retry-After") if response is not None else None
     if not value:
-        return _BACKOFF(state)
+        return max(delay_seconds, _BACKOFF(state))
     value = value.strip()
     if value.isascii() and value.isdecimal():
-        return min(float(value), RETRY_AFTER_CAP_SECONDS)
-    try:
-        retry_at = parsedate_to_datetime(value)
-    except (TypeError, ValueError):
-        return _BACKOFF(state)
-    if retry_at.tzinfo is None:
-        retry_at = retry_at.replace(tzinfo=timezone.utc)
-    seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
-    return min(max(0.0, seconds), RETRY_AFTER_CAP_SECONDS)
+        seconds = float(value)
+    else:
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return max(delay_seconds, _BACKOFF(state))
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+    if seconds > RETRY_AFTER_CAP_SECONDS:
+        raise state.outcome.exception()
+    return max(delay_seconds, seconds, 0.0)
 
 
 @retry(retry=retry_if_exception(_is_retryable), wait=_retry_wait,
        stop=stop_after_attempt(DEFAULT_MAX_RETRIES + 1), reraise=True)
-def _post_classification(url: str, headers: dict, payload: dict) -> requests.Response:
+def _post_classification(url: str, headers: dict, payload: dict, delay_seconds: float = 0.0) -> requests.Response:
     response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response
 
 
-def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DEFAULT_MAX_RETRIES):
+def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DEFAULT_MAX_RETRIES, delay_seconds=0.0):
     """
     Classifies a gazette document using DeepSeek LLM API
     
@@ -93,7 +99,7 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DE
     try:
         response = _post_classification.retry_with(
             stop=stop_after_attempt(max_retries + 1),
-        )(url, headers, payload)
+        )(url, headers, payload, delay_seconds)
         
         # Parse the response
         result = response.json()
@@ -256,6 +262,7 @@ def _read_rows_by_doc_id(csv_file_path):
     return rows_by_doc_id
 
 def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url, requests_per_minute=DEFAULT_REQUESTS_PER_MINUTE, max_retries=DEFAULT_MAX_RETRIES):
+    """Classify documents with pacing between documents and retry attempts."""
     classified_metadata_success = []
     classified_metadata_dic_success = {}
     classified_metadata_failed = []
@@ -277,7 +284,7 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url, req
         print(f"Document Availability: {doc_availability}")
         print(f"Document download URL: {doc_download_url}")
         print(f"Description: {description}")
-        res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url, max_retries)
+        res = classify_gazette(doc_text, doc_id, divert_api_key, divert_url, max_retries, delay_seconds)
         doc_type = res['type']
         doc_type_reason = res['categorisation']
         if res["success"]:
