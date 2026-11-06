@@ -39,8 +39,8 @@ def post_crawl_processing(args, config, all_download_metadata, archive_location)
                 llm_ready_texts,
                 divert_api_key,
                 divert_url,
-                requests_per_minute=classification_config.get("requests_per_minute"),
-                max_retries=classification_config.get("max_retries"),
+                requests_per_minute=classification_config.get("requests_per_minute", 20),
+                max_retries=classification_config.get("max_retries", 5),
             )
             classified_metadata_dic = {**classified_metadata_dic_success, **classified_metadata_dic_failed}
             print(f"{'-' * 80}")

@@ -3,15 +3,54 @@ import requests
 from gztarchiver.doc_inspector.LLM import GAZETTE_CLASSIFICATION_PROMPT
 from gztarchiver.models import DownloadMetadata
 from gztarchiver.doc_scraper.utils.file_utils import atomic_write_csv
-from gztarchiver.doc_inspector.utils.llm_retry import (
-    DEFAULT_MAX_RETRIES,
-    DEFAULT_REQUESTS_PER_MINUTE,
-    post_with_retry,
-    rate_limit_delay_seconds,
-)
+from email.utils import parsedate_to_datetime
+from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 from pathlib import Path
 import csv
 from datetime import datetime, timezone
+
+DEFAULT_REQUESTS_PER_MINUTE = 20
+DEFAULT_MAX_RETRIES = 5
+REQUEST_TIMEOUT_SECONDS = 30
+RETRY_AFTER_CAP_SECONDS = 300
+_BACKOFF = wait_exponential_jitter(initial=1, max=60, jitter=1)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+        return True
+    return (
+        isinstance(exc, requests.HTTPError)
+        and exc.response is not None
+        and (exc.response.status_code == 429 or 500 <= exc.response.status_code < 600)
+    )
+
+
+def _retry_wait(state: RetryCallState) -> float:
+    response = getattr(state.outcome.exception(), "response", None)
+    value = response.headers.get("Retry-After") if response is not None else None
+    if value:
+        try:
+            seconds = float(value)
+        except ValueError:
+            try:
+                retry_at = parsedate_to_datetime(value)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+            except (TypeError, ValueError):
+                return _BACKOFF(state)
+        return min(max(0.0, seconds), RETRY_AFTER_CAP_SECONDS)
+    return _BACKOFF(state)
+
+
+@retry(retry=retry_if_exception(_is_retryable), wait=_retry_wait,
+       stop=stop_after_attempt(DEFAULT_MAX_RETRIES + 1), reraise=True)
+def _post_classification(url: str, headers: dict, payload: dict) -> requests.Response:
+    response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response
+
 
 def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DEFAULT_MAX_RETRIES):
     """
@@ -52,7 +91,9 @@ def classify_gazette(content, doc_id, divert_api_key, divert_url, max_retries=DE
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     
     try:
-        response = post_with_retry(url, headers, payload, max_retries)
+        response = _post_classification.retry_with(
+            stop=stop_after_attempt(max_retries + 1),
+        )(url, headers, payload)
         
         # Parse the response
         result = response.json()
@@ -219,7 +260,7 @@ def prepare_classified_metadata(llm_ready_texts, divert_api_key, divert_url, req
     classified_metadata_dic_success = {}
     classified_metadata_failed = []
     classified_metadata_dic_failed = {}
-    delay_seconds = rate_limit_delay_seconds(requests_per_minute)
+    delay_seconds = 60.0 / requests_per_minute if requests_per_minute > 0 else 0.0
 
     for index, doc_id in enumerate(llm_ready_texts):
         if index > 0 and delay_seconds:
